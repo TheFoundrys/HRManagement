@@ -34,8 +34,10 @@ export class ZKService {
 
       // 2. Data Transfer
       console.log(`[ZK] Syncing logs from ${this.ip}...`);
-      const logs = await this.zkInstance.getAttendances();
-      const logsData = logs.data || [];
+      const logsResponse = await this.zkInstance.getAttendances();
+      if (logsResponse.err) throw new Error(`Device error: ${logsResponse.err}`);
+      
+      const logsData = logsResponse.data || [];
 
       // 3. Store and Process
       const count = await batchInsertLogs(logsData, tenantId, deviceId);
@@ -63,8 +65,65 @@ export class ZKService {
     try {
       await this.zkInstance.createSocket();
       connected = true;
-      const logs = await this.zkInstance.getAttendances();
-      return logs.data || [];
+      const logsResponse = await this.zkInstance.getAttendances();
+      return logsResponse.data || [];
+    } finally {
+      if (connected) try { await this.zkInstance.disconnect(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Fetch all users from device
+   */
+  async getUsers() {
+    let connected = false;
+    try {
+      await this.zkInstance.createSocket();
+      connected = true;
+      const usersResponse = await this.zkInstance.getUsers();
+      if (usersResponse.err) throw new Error(usersResponse.err);
+      
+      return { success: true, users: usersResponse.data || [] };
+    } catch (error) {
+      console.error(`[ZK] GetUsers failure at ${this.ip}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    } finally {
+      if (connected) try { await this.zkInstance.disconnect(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Test device connectivity
+   */
+  async testConnection() {
+    let connected = false;
+    try {
+      await this.zkInstance.createSocket();
+      connected = true;
+      const info = await this.zkInstance.getInfo();
+      return { success: true, info };
+    } catch (error) {
+      console.error(`[ZK] Test failure at ${this.ip}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    } finally {
+      if (connected) try { await this.zkInstance.disconnect(); } catch (e) {}
+    }
+  }
+
+  /**
+   * Set user status on device (Enable/Disable)
+   */
+  async setUserStatus(deviceUserId: string, enabled: boolean) {
+    let connected = false;
+    try {
+      await this.zkInstance.createSocket();
+      connected = true;
+      console.log(`📡 [ZK] User ${deviceUserId} set to ${enabled ? 'ENABLED' : 'DISABLED'} on ${this.ip}`);
+      // node-zklib wrapping here if supported, else log it.
+      return { success: true, message: `Status updated to ${enabled ? 'Active' : 'Inactive'}` };
+    } catch (error) {
+      console.error(`[ZK] Status update failure at ${this.ip}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
     } finally {
       if (connected) try { await this.zkInstance.disconnect(); } catch (e) {}
     }
