@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/stores/authStore';
+import { ThemeToggle } from './ThemeToggle';
 import {
   LayoutDashboard, Users, Clock, Calendar, Wallet,
   LogOut, GraduationCap, ChevronLeft, Menu, Fingerprint,
@@ -93,13 +94,18 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="p-4 border-t border-border bg-muted/30">
+        <div className="p-4 border-t border-border bg-muted/30 space-y-3">
           {!collapsed && (
-            <div className="mb-4 px-2">
+            <div className="px-2">
               <p className="text-sm font-bold text-foreground truncate">{user?.name}</p>
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-none mt-1">{user?.role}</p>
             </div>
           )}
+          
+          <div className="pt-2">
+            <ThemeToggle collapsed={collapsed} />
+          </div>
+
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full px-3 py-2 rounded-xl text-muted-foreground hover:text-danger hover:bg-danger/10 transition-all"

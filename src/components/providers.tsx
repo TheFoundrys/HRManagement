@@ -1,5 +1,6 @@
 'use client';
 
+import { ThemeProvider } from 'next-themes';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '@/lib/stores/authStore';
@@ -43,8 +44,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthInitializer>{children}</AuthInitializer>
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <QueryClientProvider client={queryClient}>
+        <AuthInitializer>{children}</AuthInitializer>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

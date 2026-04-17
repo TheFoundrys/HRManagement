@@ -45,7 +45,7 @@
   --muted: #f1f5f9;
   --muted-foreground: #475569; /* Darker for better accessibility */
   --border: #e2e8f0;
-  --primary: #2563eb;
+  --primary: #1a2b6d;
   --primary-foreground: #ffffff;
   --accent: #eff6ff;
   --accent-foreground: #1e40af;
@@ -61,7 +61,7 @@
   --muted: #1e293b;
   --muted-foreground: #94a3b8;
   --border: #1e293b;
-  --primary: #3b82f6;
+  --primary: #1a2b6d;
   --primary-foreground: #ffffff;
   --accent: #172554;
   --accent-foreground: #dbeafe;
@@ -94,11 +94,12 @@ body {
   font-family: var(--font-sans);
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Target specific elements for smooth transitions instead of using a wildcard */
-button, a, input, select, .card, .transition-all {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+button, a, input, select, .card, .transition-all, main, aside {
+  transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease;
 }
 
 /* Layout Specifics */

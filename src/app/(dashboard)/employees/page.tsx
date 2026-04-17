@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
-import { Users, Loader2, Search, UserPlus, Settings } from 'lucide-react';
+import { Users, Loader2, Search, UserPlus, Settings, Trash2 } from 'lucide-react';
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -9,15 +9,25 @@ export default function EmployeesPage() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({ employeeId: '', name: '', email: '', role: 'FACULTY', departmentId: '', reportsToId: '', salary: { basic: 0, hra: 0, allowances: 0, deductions: 0 } });
+  const [error, setError] = useState('');
 
   const fetchInit = async () => {
     try {
-      const [empRes, deptRes] = await Promise.all([fetch('/api/employees'), fetch('/api/admin/scheduling/departments')]);
-      const [empData, deptData] = await Promise.all([empRes.json(), deptRes.json()]);
-      if (empData.success) setEmployees(empData.employees);
-      if (deptData.success) setDepartments(deptData.departments);
+      // Fetch employees
+      const empRes = await fetch('/api/employees');
+      if (empRes.ok) {
+        const empData = await empRes.json();
+        if (empData.success) setEmployees(empData.employees);
+      }
+
+      // Fetch departments
+      const deptRes = await fetch('/api/admin/scheduling/departments');
+      if (deptRes.ok) {
+        const deptData = await deptRes.json();
+        if (deptData.success) setDepartments(deptData.departments);
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Initialization error:', e);
     } finally {
       setLoading(false);
     }
@@ -27,17 +37,42 @@ export default function EmployeesPage() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setError('');
     const res = await fetch('/api/employees', { method: 'POST', body: JSON.stringify(form) });
-    if ((await res.json()).success) { setShowModal(false); fetchInit(); }
+    const data = await res.json();
+    if (data.success) { 
+      setShowModal(false); 
+      fetchInit(); 
+    } else {
+      setError(data.error || 'Failed to onboard personnel');
+    }
+  };
+
+  const handleOffboard = async (id: string, name: string) => {
+    if (!window.confirm(`Are you sure you want to offboard ${name}? This will deactivate their account.`)) return;
+    
+    try {
+      const res = await fetch(`/api/employees?id=${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchInit();
+      } else {
+        alert(data.error || 'Failed to offboard employee');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('An error occurred during offboarding');
+    }
   };
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
     return employees.filter(e => 
-      (e.first_name + ' ' + e.last_name).toLowerCase().includes(s) || 
-      e.email.toLowerCase().includes(s) || 
-      e.university_id.toLowerCase().includes(s) ||
-      e.department_name?.toLowerCase().includes(s)
+      (String(e.first_name || '') + ' ' + String(e.last_name || '')).toLowerCase().includes(s) || 
+      String(e.email || '').toLowerCase().includes(s) || 
+      String(e.university_id || '').toLowerCase().includes(s) ||
+      String(e.department_name || '').toLowerCase().includes(s) ||
+      String(e.role || '').toLowerCase().includes(s)
     );
   }, [employees, search]);
 
@@ -63,10 +98,13 @@ export default function EmployeesPage() {
               className="bg-card border border-border p-5 rounded-2xl flex justify-between items-center hover:border-primary transition-all shadow-soft group cursor-pointer active:scale-[0.98]"
             >
               <div className="flex gap-4 items-center">
-                <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-lg">{emp.first_name[0]}{emp.last_name[0]}</div>
+                <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-lg">
+                  {(emp.first_name?.[0] || '?')}{(emp.last_name?.[0] || '')}
+                </div>
                 <div>
                   <h3 className="text-foreground font-black text-sm leading-tight uppercase tracking-tight group-hover:text-primary transition-colors">{emp.first_name} {emp.last_name}</h3>
                   <p className="text-muted-foreground text-[10px] font-bold mt-1 uppercase tracking-widest leading-none">{emp.department_name} • <span className="text-primary">{emp.email}</span></p>
+                  {emp.reporting_name && <p className="text-primary/70 text-[8px] font-black mt-2 uppercase tracking-tighter">Reports to: {emp.reporting_name}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -83,6 +121,15 @@ export default function EmployeesPage() {
                 >
                   <Settings size={16} />
                 </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOffboard(emp.university_id, `${emp.first_name} ${emp.last_name}`);
+                  }}
+                  className="p-2 hover:bg-red-500 hover:text-white rounded-lg transition-all text-muted-foreground opacity-0 group-hover:opacity-100"
+                >
+                  <Trash2 size={16} />
+                </button>
               </div>
             </div>
           ))}
@@ -92,7 +139,8 @@ export default function EmployeesPage() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
           <div className="bg-card p-10 rounded-3xl w-full max-w-md border border-border shadow-2xl">
-            <h2 className="text-2xl font-black text-foreground uppercase tracking-tight mb-8">Onboard Personnel</h2>
+            <h2 className="text-2xl font-black text-foreground uppercase tracking-tight mb-4">Onboard Personnel</h2>
+            {error && <div className="p-3 mb-4 bg-red-500/10 border border-red-500/50 text-red-500 text-xs font-bold rounded-xl">{error}</div>}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Terminal ID</label>
@@ -111,9 +159,16 @@ export default function EmployeesPage() {
                 <select onChange={e => setForm({ ...form, role: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
                   <option value="FACULTY">Faculty</option>
                   <option value="HOD">HOD</option>
-                  <option value="STAFF">Staff</option>
+                  <option value="STAFF">Employee (Staff)</option>
                   <option value="ADMIN">Admin</option>
                   <option value="NON_TEACHING">Non-Teaching</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Reporting Manager (Optional)</label>
+                <select onChange={e => setForm({ ...form, reportsToId: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
+                  <option value="">No Manager...</option>
+                  {employees.filter(e => e.role !== 'STAFF').map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.role})</option>)}
                 </select>
               </div>
               <div className="space-y-2">

@@ -22,11 +22,11 @@ export async function GET(request: Request) {
 
     // Check RBAC permission
     if (!hasPermission(baseRole, 'VIEW_ALL_EMPLOYEES') && !hasPermission(baseRole, 'VIEW_TEAM')) {
-       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const canViewPayroll = hasPermission(baseRole, 'MANAGE_PAYROLL');
-    
+
     // Core employee fields (No bank details or raw salary unless authorized)
     const empFields = `
       e.id, e.university_id, e.first_name, e.last_name, e.email, e.phone, e.role, e.is_active,
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
         queryString += ' ORDER BY e.first_name';
       } else {
         const subFields = `id, manager_id, first_name, last_name, email, university_id, department_id, designation_id, role, phone, is_active ${canViewPayroll ? ', salary_basic, salary_hra, salary_allowances, salary_deductions' : ''}`;
-        
+
         queryString = `
           WITH RECURSIVE subordinates AS (
             SELECT ${subFields}, 0 as level
@@ -146,9 +146,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Only Super Admin can create Admin accounts' }, { status: 403 });
     }
     if (targetRole === 'SUPER_ADMIN') {
-       return NextResponse.json({ error: 'Super Admin accounts are single-instance only' }, { status: 403 });
+      return NextResponse.json({ error: 'Super Admin accounts are single-instance only' }, { status: 403 });
     }
-    
+
     if (!employeeId || !name || !email || !targetRole) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
@@ -211,8 +211,8 @@ export async function POST(request: Request) {
       FROM new_emp
       RETURNING *`,
       [
-        employeeId, firstName, lastName, email, targetRole, 
-        finalDepartmentId, finalManagerId, tenantId, 
+        employeeId, firstName, lastName, email, targetRole,
+        finalDepartmentId, finalManagerId, tenantId,
         salary?.basic || 0, salary?.hra || 0, salary?.allowances || 0, salary?.deductions || 0,
         defaultHash, biometricId || employeeId
       ]
@@ -272,7 +272,7 @@ export async function PUT(request: Request) {
       WHERE university_id = $14 AND tenant_id = $12
       RETURNING *`,
       [
-        first_name, last_name, email, phone, role, 
+        first_name, last_name, email, phone, role,
         department_id, manager_id,
         salary?.basic, salary?.hra, salary?.allowances, salary?.deductions,
         tenantId, is_active, university_id, biometric_id
