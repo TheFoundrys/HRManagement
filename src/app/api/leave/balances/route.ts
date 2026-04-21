@@ -15,10 +15,11 @@ export async function GET(request: Request) {
     const currentYear = new Date().getFullYear();
 
     const result = await query(
-      `SELECT lb.*, lt.name as type_name, lt.code as type_code
+      `SELECT lb.*, lt.name as type_name, lt.code as type_code, lt.color
        FROM leave_balances lb
        JOIN leave_types lt ON lb.leave_type_id = lt.id
-       WHERE lb.employee_id = $1 AND lb.tenant_id = $2 AND lb.year = $3`,
+       JOIN employees e ON lb.employee_id = e.id
+       WHERE (e.id::text = $1 OR e.university_id = $1) AND lb.tenant_id = $2 AND lb.year = $3`,
       [employeeId, tenantId, currentYear]
     );
 

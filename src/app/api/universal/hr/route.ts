@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/jwt';
+import { sendOnboardingInvite } from '@/lib/mail/mailer';
+import crypto from 'crypto';
+import { hashPassword } from '@/lib/auth/password';
 
 // Universal HR modules that work across all tenants
 export async function POST(request: Request) {
@@ -106,13 +109,32 @@ async function handleFaculty(tenantId: string, action: string, data: any) {
       let userId;
 
       if (userQuery.rows.length === 0) {
+        const tempPassword = crypto.randomBytes(6).toString('hex');
+        const passHash = await hashPassword(tempPassword);
+        const verificationToken = crypto.randomUUID();
+        const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
         const uRes = await query(
-          `INSERT INTO users (tenant_id, email, password_hash, name, role)
-           VALUES ($1, $2, $3, $4, $5)
-           RETURNING id`,
-          [tenantId, data.email, '$2b$12$5eRfxaFdxxCbGadb37vdRuoOA6m3p3oZuja6gqelmqXZL4SC1u0me', data.firstName + ' ' + data.lastName, 'STAFF']
+          `INSERT INTO users (
+            tenant_id, email, password_hash, name, role, 
+            is_active, is_verified, verification_token, verification_token_expires
+          )
+          VALUES ($1, $2, $3, $4, $5, true, false, $6, $7)
+          RETURNING id`,
+          [
+            tenantId, data.email, passHash, 
+            data.firstName + ' ' + data.lastName, 'STAFF',
+            verificationToken, verificationExpires
+          ]
         );
         userId = uRes.rows[0].id;
+
+        // Trigger Onboarding Email
+        try {
+          await sendOnboardingInvite(data.email, data.firstName + ' ' + data.lastName, tempPassword, verificationToken);
+        } catch (mailError) {
+          console.warn('Faculty onboarding email failed:', mailError);
+        }
       } else {
         userId = userQuery.rows[0].id;
       }
@@ -346,15 +368,18 @@ async function handleLeave(tenantId: string, action: string, data: any) {
       const employeeId = empRes.rows[0].id;
 
       const result = await query(
-        `INSERT INTO leaves
-         (employee_id, leave_type, start_date, end_date, reason, status)
-         VALUES ($1, $2, $3, $4, $5, 'PENDING')
+        `INSERT INTO leave_requests
+         (employee_id, leave_type_id, tenant_id, start_date, end_date, total_days, reason, status)
+         SELECT $1, id, $3, $4, $5, $6, $7, 'pending'
+         FROM leave_types WHERE code = $2 AND tenant_id = $3
          RETURNING *`,
         [
           employeeId,
-          (data.type || data.leaveType || 'CASUAL').toUpperCase(),
+          (data.type || data.leaveType || 'EL').toUpperCase(),
+          tenantId,
           data.startDate,
           data.endDate,
+          data.totalDays || 1,
           data.reason
         ]
       );
@@ -362,9 +387,9 @@ async function handleLeave(tenantId: string, action: string, data: any) {
 
     case 'approve':
     case 'reject':
-      const newStatus = action === 'approve' ? 'APPROVED' : 'REJECTED';
+      const newStatus = action === 'approve' ? 'approved' : 'rejected';
       await query(
-        `UPDATE leaves
+        `UPDATE leave_requests
          SET status = $2, updated_at = NOW()
          WHERE id = $1`,
         [data.leaveId, newStatus]
@@ -381,9 +406,10 @@ async function handleLeave(tenantId: string, action: string, data: any) {
 
 async function getLeave(tenantId: string) {
   const result = await query(
-    `SELECT l.*, e.first_name as "firstName", e.last_name as "lastName", e.email, e.university_id as "universityId"
-     FROM leaves l
+    `SELECT l.*, e.first_name as "firstName", e.last_name as "lastName", e.email, e.university_id as "universityId", lt.name as type_name
+     FROM leave_requests l
      JOIN employees e ON l.employee_id = e.id
+     JOIN leave_types lt ON l.leave_type_id = lt.id
      WHERE e.tenant_id = $1
      ORDER BY l.created_at DESC`,
     [tenantId]
@@ -475,7 +501,7 @@ async function getDashboardStats(tenantId: string) {
   const [faculty, attendance, leave, documents] = await Promise.all([
     query(`SELECT COUNT(*) as count FROM employees WHERE tenant_id = $1`, [tenantId]),
     query(`SELECT COUNT(*) as count FROM attendance a JOIN employees e ON a.employee_id = e.id WHERE e.tenant_id = $1 AND DATE(a.date) = CURRENT_DATE`, [tenantId]),
-    query(`SELECT COUNT(*) as count FROM leaves l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1 AND l.status = 'PENDING'`, [tenantId]),
+    query(`SELECT COUNT(*) as count FROM leave_requests l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1 AND l.status = 'pending'`, [tenantId]),
     query(`SELECT COUNT(*) as count FROM documents d JOIN employees e ON d.employee_id = e.id WHERE e.tenant_id = $1`, [tenantId])
   ]);
 
@@ -492,8 +518,11 @@ async function getRecentActivity(tenantId: string) {
     `SELECT 'Faculty Added' as activity, first_name || ' ' || last_name as details, created_at as timestamp
      FROM employees WHERE tenant_id = $1
      UNION ALL
-     SELECT 'Leave Request' as activity, leave_type as details, created_at as timestamp
-     FROM leaves l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1
+     SELECT 'Leave Request' as activity, lt.name as details, l.created_at as timestamp
+     FROM leave_requests l 
+     JOIN employees e ON l.employee_id = e.id 
+     JOIN leave_types lt ON l.leave_type_id = lt.id
+     WHERE e.tenant_id = $1
      ORDER BY timestamp DESC LIMIT 10`,
     [tenantId]
   );

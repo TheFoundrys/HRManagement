@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
+import crypto from 'crypto';
 
 export async function GET(request: Request) {
   try {
@@ -27,14 +28,23 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL('/login?error=Verification link expired. Please login again to resend.', request.url));
     }
 
-    // Verify User
+    // 1. Verify User and Generate a Reset Token for immediate password setup
+    const resetToken = crypto.randomUUID();
+    const resetExpires = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 hour
+
     await query(
-      'UPDATE users SET is_verified = true, verification_token = NULL, verification_token_expires = NULL WHERE id = $1',
-      [user.id]
+      `UPDATE users SET 
+        is_verified = true, 
+        verification_token = NULL, 
+        verification_token_expires = NULL,
+        reset_token = $2,
+        reset_token_expires = $3
+      WHERE id = $1`,
+      [user.id, resetToken, resetExpires]
     );
 
-    // Redirect to login with success
-    return NextResponse.redirect(new URL('/login?success=Email verified successfully. You can now login.', request.url));
+    // 2. Redirect to password setup (reset password page)
+    return NextResponse.redirect(new URL(`/reset-password?token=${resetToken}&onboarding=true`, request.url));
 
   } catch (error) {
     console.error('Verification error:', error);

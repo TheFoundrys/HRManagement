@@ -13,18 +13,18 @@ import {
 import { useState, useMemo } from 'react';
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'HOD', 'HR', 'STAFF', 'NON_TEACHING'] },
-  { href: '/team', label: 'My Team', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'HOD', 'HR', 'STAFF', 'NON_TEACHING'] },
-  { href: '/employees', label: 'Employees', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'HR'] },
-  { href: '/attendance', label: 'Attendance', icon: Clock, roles: ['SUPER_ADMIN', 'ADMIN', 'HOD', 'HR', 'STAFF', 'NON_TEACHING'] },
-  { href: '/leave', label: 'Leave', icon: CalendarOff, roles: ['SUPER_ADMIN', 'ADMIN', 'HOD', 'HR', 'STAFF', 'NON_TEACHING'] },
-  { href: '/payslips', label: 'Payslips', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'HOD', 'HR', 'STAFF', 'NON_TEACHING'] },
-  { href: '/salary-structure', label: 'Salary Structure', icon: Wallet, roles: ['SUPER_ADMIN', 'ADMIN', 'HR'] },
-  { href: '/biometric', label: 'Biometric', icon: Fingerprint, roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/attendance/network', label: 'Network Security', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN'] },
-  { href: '/admin/requests', label: 'Support Requests', icon: MessageSquare, roles: ['SUPER_ADMIN', 'ADMIN', 'HR'] },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'IT_ADMIN', 'PAYROLL_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
+  { href: '/team', label: 'My Team', icon: Users, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR', 'MANAGER', 'TEAM_LEAD', 'HOD', 'PRINCIPAL', 'DIRECTOR'] },
+  { href: '/employees', label: 'Employees', icon: Users, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR', 'PRINCIPAL', 'DIRECTOR'] },
+  { href: '/attendance', label: 'Attendance', icon: Clock, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'IT_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
+  { href: '/leave', label: 'Leave', icon: CalendarOff, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
+  { href: '/payslips', label: 'Payslips', icon: FileText, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'PAYROLL_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
+  { href: '/salary-structure', label: 'Salary Structure', icon: Wallet, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR', 'PAYROLL_ADMIN', 'PRINCIPAL', 'DIRECTOR'] },
+  { href: '/biometric', label: 'Biometric', icon: Fingerprint, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'IT_ADMIN'] },
+  { href: '/admin/attendance/network', label: 'Network Security', icon: Shield, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'IT_ADMIN'] },
+  { href: '/admin/requests', label: 'Support Requests', icon: MessageSquare, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR'] },
   { href: '/superadmin/tenants', label: 'Tenants', icon: Building2, roles: ['SUPER_ADMIN'] },
-  { href: '/profile', label: 'Profile', icon: UserCircle, roles: ['SUPER_ADMIN', 'ADMIN', 'HOD', 'HR', 'STAFF', 'NON_TEACHING'] },
+  { href: '/profile', label: 'Profile', icon: UserCircle, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'IT_ADMIN', 'PAYROLL_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
 ];
 
 export function Sidebar() {

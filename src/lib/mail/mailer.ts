@@ -58,3 +58,48 @@ export async function sendResetPasswordEmail(email: string, name: string, token:
 
   return transporter.sendMail(mailOptions);
 }
+
+export async function sendOnboardingInvite(email: string, name: string, tempPassword: string, token: string) {
+  const verifyUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/verify?token=${token}`;
+
+  const mailOptions = {
+    from: `"The Foundrys HR" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: 'Welcome to The Foundrys! Important Login Information',
+    html: `
+      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: auto; padding: 40px; background-color: #ffffff; border: 1px solid #e1e8ed; border-radius: 16px; color: #1c1e21;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <h2 style="color: #2563eb; margin: 0; font-size: 24px; font-weight: 800;">Welcome to the Team, ${name}!</h2>
+        </div>
+        
+        <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+          We share your excitement as you join The Foundrys. Your HR Portal account is ready for you to access your dashboard, attendance, and payroll information.
+        </p>
+        
+        <div style="background-color: #f3f4f6; padding: 25px; border-radius: 12px; margin: 25px 0;">
+          <h3 style="margin-top: 0; color: #111827; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Your Temporary Credentials</h3>
+          <p style="margin: 10px 0; font-size: 15px;"><strong>Email:</strong> ${email}</p>
+          <p style="margin: 10px 0; font-size: 15px;"><strong>Temp Password:</strong> <code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px;">${tempPassword}</code></p>
+        </div>
+
+        <div style="text-align: center; margin: 35px 0;">
+          <a href="${verifyUrl}" style="padding: 14px 32px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 10px; font-weight: 700; display: inline-block;">Verify & Set Your Password</a>
+        </div>
+
+        <p style="font-size: 14px; line-height: 1.5; color: #6b7280; font-style: italic;">
+          <strong>Security:</strong> Clicking the link above will verify your account and allow you to set your own private password.
+        </p>
+
+        <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;" />
+        
+        <p style="font-size: 11px; color: #9ca3af; text-align: center; margin: 0;">
+          The Foundrys HR System &bull; Institutional Administration<br/>
+          This is an automated message, please do not reply.
+        </p>
+      </div>
+    `,
+  };
+
+  return transporter.sendMail(mailOptions);
+}
+

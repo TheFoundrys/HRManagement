@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { name, adminEmail, adminName, adminPassword } = await request.json();
+    const { name, adminEmail, adminName, adminPassword, tenantType = 'EDUCATION' } = await request.json();
 
     if (!name || !adminEmail || !adminPassword) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -47,19 +47,48 @@ export async function POST(request: Request) {
 
     // 1. Create Tenant
     const tenantResult = await query(
-      'INSERT INTO tenants (name, subdomain) VALUES ($1, $2) RETURNING id',
-      [name, generatedSubdomain]
+      'INSERT INTO tenants (name, subdomain, tenant_type) VALUES ($1, $2, $3) RETURNING id',
+      [name, generatedSubdomain, tenantType]
     );
     const tenantId = tenantResult.rows[0].id;
 
     // 2. Create Default Admin User for this tenant
     const passwordHash = await hashPassword(adminPassword);
     const userResult = await query(
-      `INSERT INTO users (name, email, password_hash, role, tenant_id, is_active, is_verified)
-       VALUES ($1, $2, $3, 'ADMIN', $4, true, true)
+      `INSERT INTO users (tenant_id, name, email, password_hash, role, is_active)
+       VALUES ($1, $2, $3, $4, 'ADMIN', true)
        RETURNING id`,
-      [adminName || 'Admin', adminEmail.toLowerCase(), passwordHash, tenantId]
+      [tenantId, adminName || 'Admin', adminEmail.toLowerCase(), passwordHash]
     );
+
+    // 3. Seed Standard Data based on Tenant Type
+    if (tenantType === 'EDUCATION') {
+      const depts = [
+        'Executive', 'DeepTech_AI', 'DeepTech_CyberSecurity', 'DeepTech_Quantum', 
+        'DeepTech_Blockchain', 'Entrepreneurship', 'Sustainability', 'Energy', 
+        'Programs', 'Faculty_Development', 'Engineering', 'Research', 
+        'Innovation_Lab', 'Startup_Incubation', 'Product', 'HR', 'Operations', 
+        'Admissions', 'Partnerships', 'Marketing', 'Community', 'Finance', 'Legal'
+      ];
+      const desigs = ['Professor', 'Dean', 'Registrar', 'Assistant Professor', 'Director', 'Principal'];
+      
+      for (const d of depts) {
+        await query('INSERT INTO departments (tenant_id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [tenantId, d]);
+      }
+      for (const d of desigs) {
+        await query('INSERT INTO designations (tenant_id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [tenantId, d]);
+      }
+    } else {
+      const depts = ['Engineering', 'Product', 'Sales', 'Marketing', 'Operations', 'HR', 'Finance', 'Legal'];
+      const desigs = ['CEO', 'Manager', 'TL', 'Employee']; // Hierarchical Designations
+      
+      for (const d of depts) {
+        await query('INSERT INTO departments (tenant_id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [tenantId, d]);
+      }
+      for (const d of desigs) {
+        await query('INSERT INTO designations (tenant_id, name) VALUES ($1, $2) ON CONFLICT DO NOTHING', [tenantId, d]);
+      }
+    }
 
     return NextResponse.json({
       success: true,

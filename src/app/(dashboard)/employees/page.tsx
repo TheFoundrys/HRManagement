@@ -5,11 +5,37 @@ import { Users, Loader2, Search, UserPlus, Settings, Trash2 } from 'lucide-react
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
+  const [designations, setDesignations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ employeeId: '', name: '', email: '', role: 'FACULTY', departmentId: '', reportsToId: '', salary: { basic: 0, hra: 0, allowances: 0, deductions: 0 } });
+  const [form, setForm] = useState({ employeeId: '', name: '', email: '', role: '', departmentId: '', designationId: '', reportsToId: '', salary: { basic: 0, hra: 0, allowances: 0, deductions: 0 } });
   const [error, setError] = useState('');
+  const [tenantType, setTenantType] = useState<'EDUCATION' | 'COMPANY'>('EDUCATION');
+
+  // Define dynamic role sets
+  const ROLES = {
+    COMPANY: [
+      { id: 'GLOBAL_ADMIN', label: 'Global Admin (All Access)' },
+      { id: 'HR_MANAGER', label: 'HR Manager' },
+      { id: 'HR_EXECUTIVE', label: 'HR Executive' },
+      { id: 'PAYROLL_ADMIN', label: 'Payroll Admin' },
+      { id: 'EXPENSE_MANAGER', label: 'Expense Manager' },
+      { id: 'IT_ADMIN', label: 'IT Admin' },
+      { id: 'LEARNING_ADMIN', label: 'Learning Admin' },
+      { id: 'MANAGER', label: 'Managerial Access' },
+      { id: 'EMPLOYEE', label: 'Standard Employee' }
+    ],
+    EDUCATION: [
+      { id: 'ADMIN', label: 'Admin' },
+      { id: 'PRINCIPAL', label: 'Principal' },
+      { id: 'DIRECTOR', label: 'Director' },
+      { id: 'HOD', label: 'Head of Department (HOD)' },
+      { id: 'FACULTY', label: 'Faculty' },
+      { id: 'STAFF', label: 'Academic Staff' },
+      { id: 'NON_TEACHING', label: 'Non-Teaching Support' }
+    ]
+  };
 
   const fetchInit = async () => {
     try {
@@ -25,6 +51,24 @@ export default function EmployeesPage() {
       if (deptRes.ok) {
         const deptData = await deptRes.json();
         if (deptData.success) setDepartments(deptData.departments);
+      }
+
+      // Fetch designations
+      const desigRes = await fetch('/api/admin/designations');
+      if (desigRes.ok) {
+        const desigData = await desigRes.json();
+        if (desigData.success) setDesignations(desigData.designations);
+      }
+
+      // Fetch Me for Tenant Type
+      const meRes = await fetch('/api/employees/me');
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.success) {
+          const type = meData.employee.tenantType || 'EDUCATION';
+          setTenantType(type);
+          setForm(f => ({ ...f, role: ROLES[type][ROLES[type].length - 1].id })); // Default to lowest role
+        }
       }
     } catch (e) {
       console.error('Initialization error:', e);
@@ -109,7 +153,9 @@ export default function EmployeesPage() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <span className="bg-muted text-primary text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-[0.1em] border border-border">{emp.role}</span>
+                  <span className="bg-muted text-primary text-[9px] font-black px-2 py-1 rounded-md uppercase tracking-[0.1em] border border-border">
+                    {ROLES[tenantType].find(r => r.id === emp.role)?.label || emp.role}
+                  </span>
                   <p className="text-muted-foreground text-[10px] mt-2 font-mono tracking-widest uppercase font-black leading-none">{emp.university_id}</p>
                 </div>
                 <button 
@@ -155,29 +201,45 @@ export default function EmployeesPage() {
                 <input type="email" placeholder="Corporate Email" required onChange={e => setForm({ ...form, email: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none transition-all" />
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Assigned Role</label>
-                <select onChange={e => setForm({ ...form, role: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
-                  <option value="FACULTY">Faculty</option>
-                  <option value="HOD">HOD</option>
-                  <option value="STAFF">Employee (Staff)</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="NON_TEACHING">Non-Teaching</option>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Hierarchy Designation</label>
+                <select onChange={e => setForm({ ...form, designationId: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
+                  <option value="">Select Designation...</option>
+                  {designations.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Reporting Manager (Optional)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">System Access (Role)</label>
+                <select 
+                  value={form.role}
+                  onChange={e => setForm({ ...form, role: e.target.value })} 
+                  className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer"
+                >
+                  {ROLES[tenantType].map(role => (
+                    <option key={role.id} value={role.id}>{role.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Reporting Person (Optional)</label>
                 <select onChange={e => setForm({ ...form, reportsToId: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
-                  <option value="">No Manager...</option>
-                  {employees.filter(e => e.role !== 'STAFF').map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.role})</option>)}
+                  <option value="">No Reporting Person...</option>
+                  {employees.filter(e => {
+                    if (tenantType === 'COMPANY') {
+                      return e.role !== 'EMPLOYEE'; // Everyone above standard employee
+                    }
+                    return e.role !== 'NON_TEACHING'; // Everyone above non-teaching staff
+                  }).map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name} ({e.role})</option>)}
                 </select>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Department</label>
-                <select onChange={e => setForm({ ...form, departmentId: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
-                  <option value="">Assign Department...</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-              </div>
+              {tenantType === 'EDUCATION' && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Department</label>
+                  <select onChange={e => setForm({ ...form, departmentId: e.target.value })} className="w-full bg-muted border border-border px-5 py-4 rounded-xl text-foreground text-sm focus:border-primary outline-none cursor-pointer">
+                    <option value="">Assign Department...</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="flex gap-4 pt-6">
                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-4 bg-muted border border-border hover:bg-muted text-muted-foreground rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Cancel</button>
                 <button type="submit" className="flex-1 py-4 bg-primary text-primary-foreground rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">Finalize</button>

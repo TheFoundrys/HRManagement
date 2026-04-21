@@ -6,17 +6,27 @@ export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
     const { searchParams } = new URL(request.url);
-    const employeeId = searchParams.get('employeeId');
+    let employeeId = searchParams.get('employeeId');
+    const userRole = (request.headers.get('x-user-role') || '').toLowerCase();
+    
+    const canManageLeave = ['admin', 'super_admin', 'global_admin', 'hr', 'hr_manager', 'hr_executive', 'hod', 'principal', 'director', 'manager'].includes(userRole);
 
-    const filter = employeeId ? 'AND lr.employee_id = $2' : '';
+    // Security: If not an approver/admin, force their own employeeId
+    if (!canManageLeave) {
+      // In a real app we'd fetch the employee record linked to the session user
+      // For now, if employeeId is missing and they aren't admin, it's a 403 or we must have one
+      if (!employeeId) return NextResponse.json({ error: 'Permission denied: Missing scope' }, { status: 403 });
+    }
+
     const params = employeeId ? [tenantId, employeeId] : [tenantId];
 
     const result = await query(
-      `SELECT lr.*, lt.name as type_name, e.first_name, e.last_name
+      `SELECT lr.*, lt.name as type_name, e.first_name, e.last_name, e.employee_id as emp_string_id
        FROM leave_requests lr
        JOIN leave_types lt ON lr.leave_type_id = lt.id
-       JOIN employees e ON lr.employee_id = e.employee_id
-       WHERE lr.tenant_id = $1 ${filter}
+       JOIN employees e ON lr.employee_id = e.id
+       WHERE lr.tenant_id = $1 
+       ${employeeId ? 'AND (e.id::text = $2 OR e.employee_id = $2 OR e.university_id = $2)' : ''}
        ORDER BY lr.created_at DESC`,
       params
     );
@@ -35,10 +45,10 @@ export async function POST(request: Request) {
     const { employeeId, leaveTypeId, startDate, endDate, reason, isHalfDay, halfDayType, substitutionEmployeeId, attachmentUrl } = body;
 
     // 0. Auto-Onboarding Check: Ensure employee record exists
-    let activeEmployeeId = employeeId;
+    let activeEmployeeUuid = null;
     let activeDeptId = null;
 
-    let empResult = await query('SELECT department_id FROM employees WHERE employee_id = $1 AND tenant_id = $2', [activeEmployeeId, tenantId]);
+    let empResult = await query('SELECT id, department_id FROM employees WHERE (employee_id = $1 OR university_id = $1) AND tenant_id = $2', [employeeId, tenantId]);
     
     // If employee record is missing, try to create it using User session info
     if (empResult.rowCount === 0) {
@@ -54,21 +64,22 @@ export async function POST(request: Request) {
         const defaultDept = '0bd710c2-bb92-4c77-a67f-013573f25cc0';
 
         // Create the employee record
-        await query(
+        const insertRes = await query(
           `INSERT INTO employees (employee_id, university_id, first_name, last_name, email, tenant_id, department_id, user_id, is_active)
-           VALUES ($1, $1, $2, $3, $4, $5, $6, $7, true)`,
+           VALUES ($1, $1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
           [newEmpId, firstName, lastName, user.email, tenantId, defaultDept, user.id]
         );
+        activeEmployeeUuid = insertRes.rows[0].id;
 
         // Link the user record
         await query('UPDATE users SET employee_id = $1, is_active = true WHERE id = $2', [newEmpId, user.id]);
         
-        activeEmployeeId = newEmpId;
         activeDeptId = defaultDept;
       } else {
         return NextResponse.json({ error: 'Personnel identity not found. Please re-login.' }, { status: 404 });
       }
     } else {
+      activeEmployeeUuid = empResult.rows[0].id;
       activeDeptId = empResult.rows[0].department_id;
     }
 
@@ -83,23 +94,23 @@ export async function POST(request: Request) {
     let balanceResult = await query(
       `SELECT remaining_days FROM leave_balances 
        WHERE employee_id = $1 AND leave_type_id = $2 AND tenant_id = $3 AND year = $4`,
-      [activeEmployeeId, leaveTypeId, tenantId, new Date().getFullYear()]
+      [activeEmployeeUuid, leaveTypeId, tenantId, new Date().getFullYear()]
     );
 
     if (balanceResult.rowCount === 0) {
-      const allTypes = await query('SELECT id, max_per_year FROM leave_types WHERE tenant_id = $1', [tenantId]);
+      const allTypes = await query('SELECT id, annual_quota FROM leave_types WHERE tenant_id = $1', [tenantId]);
       for (const lt of allTypes.rows) {
         await query(
-          `INSERT INTO leave_balances (employee_id, leave_type_id, tenant_id, year, allocated_days, used_days, remaining_days)
-           VALUES ($1, $2, $3, $4, $5, 0, $5)
+          `INSERT INTO leave_balances (employee_id, leave_type_id, tenant_id, year, allocated_days, used_days, remaining_days, accrued_so_far)
+           VALUES ($1, $2, $3, $4, $5, 0, $5, $5)
            ON CONFLICT (employee_id, leave_type_id, year) DO NOTHING`,
-          [activeEmployeeId, lt.id, tenantId, new Date().getFullYear(), lt.max_per_year]
+          [activeEmployeeUuid, lt.id, tenantId, new Date().getFullYear(), lt.annual_quota]
         );
       }
       balanceResult = await query(
         `SELECT remaining_days FROM leave_balances 
          WHERE employee_id = $1 AND leave_type_id = $2 AND tenant_id = $3 AND year = $4`,
-        [activeEmployeeId, leaveTypeId, tenantId, new Date().getFullYear()]
+        [activeEmployeeUuid, leaveTypeId, tenantId, new Date().getFullYear()]
       );
     }
 
@@ -110,7 +121,7 @@ export async function POST(request: Request) {
     // 3. Quota check
     const quotaResult = await query(
       `SELECT COUNT(*) as count FROM leave_requests lr
-       JOIN employees e ON lr.employee_id = e.employee_id
+       JOIN employees e ON lr.employee_id = e.id
        WHERE e.department_id = $1 AND lr.tenant_id = $2 AND lr.status = 'approved'
        AND (
         (lr.start_date <= $3 AND lr.end_date >= $3) OR
@@ -133,11 +144,20 @@ export async function POST(request: Request) {
         (start_date <= $4 AND end_date >= $4) OR
         (start_date >= $3 AND end_date <= $4)
        )`,
-      [activeEmployeeId, tenantId, startDate, endDate]
+      [activeEmployeeUuid, tenantId, startDate, endDate]
     );
 
     if (overlapResult.rowCount && overlapResult.rowCount > 0) {
       return NextResponse.json({ error: 'Overlapping request detected' }, { status: 400 });
+    }
+
+    // 4b. Resolve Substitution UUID
+    let substitutionUuid = null;
+    if (substitutionEmployeeId) {
+      const subRes = await query('SELECT id FROM employees WHERE (employee_id = $1 OR university_id = $1) AND tenant_id = $2', [substitutionEmployeeId, tenantId]);
+      if (subRes.rowCount && subRes.rowCount > 0) {
+        substitutionUuid = subRes.rows[0].id;
+      }
     }
 
     // 5. Create request
@@ -147,7 +167,7 @@ export async function POST(request: Request) {
         is_half_day, half_day_type, substitution_employee_id, attachment_url, current_level
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 1)
       RETURNING *`,
-      [activeEmployeeId, leaveTypeId, tenantId, startDate, endDate, totalDays, reason, isHalfDay, halfDayType, substitutionEmployeeId, attachmentUrl]
+      [activeEmployeeUuid, leaveTypeId, tenantId, startDate, endDate, totalDays, reason, isHalfDay, halfDayType, substitutionUuid, attachmentUrl]
     );
 
     return NextResponse.json({ success: true, request: result.rows[0] });

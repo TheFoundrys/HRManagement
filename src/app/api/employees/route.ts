@@ -4,6 +4,8 @@ import { verifyToken } from '@/lib/auth/jwt';
 import { cookies } from 'next/headers';
 import { hasPermission } from '@/lib/auth/rbac';
 import { autoLinkBiometric } from '@/lib/attendance/engine';
+import { sendOnboardingInvite } from '@/lib/mail/mailer';
+import crypto from 'crypto';
 
 export async function GET(request: Request) {
   try {
@@ -139,7 +141,7 @@ export async function POST(request: Request) {
 
     const body = await request.json();
     const { tenantId, role: currentUserRole } = payload;
-    const { employeeId, name, email, role: targetRole, departmentId, reportsToId, salary, biometricId } = body;
+    const { employeeId, name, email, role: targetRole, departmentId, designationId, reportsToId, salary, biometricId } = body;
 
     // Enforce role restrictions
     if (targetRole === 'ADMIN' && currentUserRole !== 'SUPER_ADMIN') {
@@ -193,30 +195,47 @@ export async function POST(request: Request) {
     }
 
     // 1. Transaction to Create Employee and User
-    // Use a default password 'welcome123' if not provided (hashed)
+    // Generate a secure temporary password and hash it
+    const tempPassword = crypto.randomBytes(6).toString('hex'); // 12 chars
     const { hashPassword } = await import('@/lib/auth/password');
-    const defaultHash = await hashPassword('welcome123');
+    const passwordHash = await hashPassword(tempPassword);
+    
+    const verificationToken = crypto.randomUUID();
+    const verificationExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
     const result = await query(
       `WITH new_emp AS (
         INSERT INTO employees (
           university_id, employee_id, first_name, last_name, email, role, 
-          department_id, manager_id, tenant_id, 
+          department_id, designation_id, manager_id, tenant_id, 
           salary_basic, salary_hra, salary_allowances, salary_deductions, is_active, biometric_id
-        ) VALUES ($1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, true, $14)
+        ) VALUES ($1, $1, $2, $3, $4, $5, $6, $17, $7, $8, $9, $10, $11, $12, true, $14)
         RETURNING id, university_id, first_name, last_name, email, role, tenant_id
       )
-      INSERT INTO users (name, email, password_hash, role, tenant_id, employee_id, is_active, is_verified)
-      SELECT first_name || ' ' || last_name, email, $13, role, tenant_id, university_id, true, false
+      INSERT INTO users (
+        name, email, password_hash, role, tenant_id, employee_id, 
+        is_active, is_verified, verification_token, verification_token_expires
+      )
+      SELECT first_name || ' ' || last_name, email, $13, role, tenant_id, university_id, 
+             true, false, $15, $16
       FROM new_emp
       RETURNING *`,
       [
         employeeId, firstName, lastName, email, targetRole,
         finalDepartmentId, finalManagerId, tenantId,
         salary?.basic || 0, salary?.hra || 0, salary?.allowances || 0, salary?.deductions || 0,
-        defaultHash, biometricId || employeeId
+        passwordHash, biometricId || employeeId,
+        verificationToken, verificationExpires,
+        designationId || null
       ]
     );
+
+    // 2. Trigger Onboarding Email
+    try {
+      await sendOnboardingInvite(email, name, tempPassword, verificationToken);
+    } catch (mailError) {
+      console.warn('Onboarding email delivery failed:', mailError);
+    }
 
     // 2. Trigger Auto-Link for biometric logs
     const newEmployee = result.rows[0];
@@ -251,7 +270,7 @@ export async function PUT(request: Request) {
     const { tenantId } = payload;
     const { university_id, ...updateData } = body;
 
-    const { first_name, last_name, email, phone, role, department_id, manager_id, salary, is_active, biometric_id } = updateData;
+    const { first_name, last_name, email, phone, role, department_id, designation_id, manager_id, salary, is_active, biometric_id } = updateData;
 
     const result = await query(
       `UPDATE employees SET
@@ -268,6 +287,7 @@ export async function PUT(request: Request) {
         salary_deductions = COALESCE($11, salary_deductions),
         is_active = COALESCE($13, is_active),
         biometric_id = COALESCE($15, biometric_id),
+        designation_id = $16,
         updated_at = NOW()
       WHERE university_id = $14 AND tenant_id = $12
       RETURNING *`,
@@ -275,7 +295,8 @@ export async function PUT(request: Request) {
         first_name, last_name, email, phone, role,
         department_id, manager_id,
         salary?.basic, salary?.hra, salary?.allowances, salary?.deductions,
-        tenantId, is_active, university_id, biometric_id
+        tenantId, is_active, university_id, biometric_id,
+        designation_id
       ]
     );
 
@@ -301,18 +322,21 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { tenantId } = payload;
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
     if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+    const { tenantId } = payload;
 
-    await query(
-      'UPDATE employees SET is_active = false, updated_at = NOW() WHERE university_id = $1 AND tenant_id = $2',
-      [id, tenantId]
-    );
+    // 1. Find employee info (need email for user deletion)
+    const empRes = await query('SELECT id, email FROM employees WHERE (university_id = $1 OR employee_id = $1) AND tenant_id = $2', [id, tenantId]);
+    if (empRes.rows.length === 0) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    const emp = empRes.rows[0];
 
-    return NextResponse.json({ success: true, message: 'Employee deactivated' });
+    // 2. Delete linked user first (FK constraint)
+    await query('DELETE FROM users WHERE email = $1 AND tenant_id = $2', [emp.email, tenantId]);
+
+    // 3. Delete employee (Cascades to attendance, leaves, etc.)
+    await query('DELETE FROM employees WHERE id = $1', [emp.id]);
+
+    return NextResponse.json({ success: true, message: 'Employee permanently off-boarded' });
   } catch (error) {
     console.error('Delete error:', error);
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 });

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const employeeId = searchParams.get('employeeId');
 
-    let queryString = 'SELECT * FROM leaves WHERE tenant_id = $1';
+    let queryString = 'SELECT * FROM leave_requests WHERE tenant_id = $1';
     const params: unknown[] = [tenantId];
     let paramIndex = 2;
 
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
     const totalDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
     const result = await query(
-      `INSERT INTO leaves (
-        employee_id, tenant_id, leave_type, start_date, end_date, total_days, reason, status
+      `INSERT INTO leave_requests (
+        employee_id, tenant_id, leave_type_id, start_date, end_date, total_days, reason, status
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
@@ -80,11 +80,11 @@ export async function PUT(request: Request) {
 
     // Update leave status
     const result = await query(
-      `UPDATE leaves SET 
-        status = $1, approved_by = $2, approved_at = NOW(), comments = $3, updated_at = NOW()
-      WHERE id = $4 AND tenant_id = $5
+      `UPDATE leave_requests SET 
+        status = $1, approver_id = $2, updated_at = NOW()
+      WHERE id = $3 AND tenant_id = $4
       RETURNING *`,
-      [action === 'approve' ? 'approved' : 'rejected', approvedBy, comments || '', leaveId, tenantId]
+      [action === 'approve' ? 'approved' : 'rejected', approvedBy, leaveId, tenantId]
     );
 
     if (result.rowCount === 0) {

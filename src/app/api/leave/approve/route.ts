@@ -7,9 +7,9 @@ export async function GET(request: Request) {
     const tenantId = await getTenantId(request);
 
     const result = await query(
-      `SELECT lr.*, e.first_name, e.last_name, lt.name as type_name
+      `SELECT lr.*, e.first_name, e.last_name, e.employee_id as emp_string_id, lt.name as type_name
        FROM leave_requests lr
-       JOIN employees e ON lr.employee_id = e.employee_id
+       JOIN employees e ON lr.employee_id = e.id
        JOIN leave_types lt ON lr.leave_type_id = lt.id
        WHERE lr.tenant_id = $1 AND lr.status = 'pending'
        ORDER BY lr.created_at ASC`,
@@ -37,7 +37,8 @@ export async function POST(request: Request) {
     let activeApproverId = approverId;
     
     // Check if approver exists as an employee
-    const approverCheck = await query('SELECT id FROM employees WHERE employee_id = $1 AND tenant_id = $2', [activeApproverId, tenantId]);
+    // Check if approver exists as an employee
+    const approverCheck = await query('SELECT id FROM employees WHERE (employee_id = $1 OR university_id = $1) AND tenant_id = $2', [approverId, tenantId]);
     
     if (approverCheck.rowCount === 0) {
       // If approverId is null or missing record, try to heal from User table
@@ -55,19 +56,21 @@ export async function POST(request: Request) {
         const finalEmpCheck = await query('SELECT employee_id FROM employees WHERE email = $1 AND tenant_id = $2', [user.email, tenantId]);
         
         if (finalEmpCheck.rowCount === 0) {
-          await query(
+          const insertRes = await query(
             `INSERT INTO employees (employee_id, university_id, first_name, last_name, email, tenant_id, department_id, user_id, is_active)
-             VALUES ($1, $1, $2, $3, $4, $5, $6, $7, true)`,
+             VALUES ($1, $1, $2, $3, $4, $5, $6, $7, true) RETURNING id`,
             [newEmpId, firstName, lastName, user.email, tenantId, defaultDept, user.id]
           );
           await query('UPDATE users SET employee_id = $1, is_active = true WHERE id = $2', [newEmpId, user.id]);
-          activeApproverId = newEmpId;
+          activeApproverId = insertRes.rows[0].id;
         } else {
-          activeApproverId = finalEmpCheck.rows[0].employee_id;
+          activeApproverId = finalEmpCheck.rows[0].id; // Ensure we use the record ID (UUID)
         }
       } else {
         return NextResponse.json({ error: 'Approver identity failed validation' }, { status: 404 });
       }
+    } else {
+      activeApproverId = approverCheck.rows[0].id;
     }
 
     // 1. Get current state of the request
@@ -114,13 +117,40 @@ export async function POST(request: Request) {
         ['approved', 3, requestId, tenantId]
       );
 
+      console.log(`[APPROVAL] Final approval for request ${requestId}. Employee: ${req.employee_id}, Type: ${req.leave_type_id}, Days: ${req.total_days}`);
+
+      // Resolve Employee UUID if req.employee_id is a string ID
+      const empResolve = await query('SELECT id FROM employees WHERE id::text = $1 OR employee_id = $1 OR university_id = $1 LIMIT 1', [req.employee_id]);
+      const empUuid = empResolve.rows[0]?.id || req.employee_id;
+
       // Perform Balance Deduction (ensure balance exists first)
-      await query(
-        `UPDATE leave_balances 
-         SET used_days = used_days + $1, remaining_days = remaining_days - $1, updated_at = NOW()
-         WHERE employee_id = $2 AND leave_type_id = $3 AND year = $4`,
-        [req.total_days, req.employee_id, req.leave_type_id, new Date().getFullYear()]
+      const balanceCheck = await query(
+        `SELECT id FROM leave_balances WHERE employee_id = $1 AND leave_type_id = $2 AND year = $3`,
+        [req.employee_id, req.leave_type_id, new Date().getFullYear()]
       );
+
+      if (balanceCheck.rowCount === 0) {
+        // Create balance record if missing
+        await query(
+          `INSERT INTO leave_balances (tenant_id, employee_id, leave_type_id, year, allocated_days, used_days, remaining_days, accrued_so_far)
+           SELECT tenant_id, id, $2, $3, 0, 0, 0, 0 FROM employees WHERE id = $1
+           ON CONFLICT DO NOTHING`,
+          [req.employee_id, req.leave_type_id, new Date().getFullYear()]
+        );
+      }
+
+      const updateRes = await query(
+        `UPDATE leave_balances 
+         SET used_days = used_days + $1::numeric, 
+             remaining_days = remaining_days - $1::numeric, 
+             updated_at = NOW()
+         WHERE employee_id = $2::uuid
+         AND leave_type_id = $3::uuid 
+         AND year = $4`,
+        [req.total_days, empUuid, req.leave_type_id, new Date().getFullYear()]
+      );
+
+      console.log(`[APPROVAL] Balance update complete. RowCount: ${updateRes.rowCount}, Emp: ${empUuid}`);
 
       // Multi-day Attendance Sync
       const start = new Date(req.start_date);

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Building2, Globe, Calendar, Link as LinkIcon, Search, MoreVertical, Edit2 } from 'lucide-react';
+import { Plus, Trash2, Building2, Globe, Calendar, Link as LinkIcon, Search, MoreVertical, Edit2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 interface Tenant {
   id: string;
   name: string;
   subdomain: string;
+  tenant_type: 'EDUCATION' | 'COMPANY';
   created_at: string;
 }
 
@@ -15,6 +16,8 @@ export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     fetchTenants();
@@ -43,6 +46,33 @@ export default function TenantsPage() {
       }
     } catch (err) {
       console.error('Error deleting tenant:', err);
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTenant) return;
+    
+    setIsUpdating(true);
+    try {
+      const res = await fetch(`/api/superadmin/tenants/${editingTenant.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingTenant.name,
+          tenantType: editingTenant.tenant_type
+        }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        setTenants(tenants.map(t => t.id === editingTenant.id ? data.tenant : t));
+        setEditingTenant(null);
+      }
+    } catch (err) {
+      console.error('Error updating tenant:', err);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -123,11 +153,20 @@ export default function TenantsPage() {
                 <tr key={tenant.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                        <Building2 className="w-5 h-5" />
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        tenant.tenant_type === 'EDUCATION' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-emerald-500/10 text-emerald-600'
+                      }`}>
+                        {tenant.tenant_type === 'EDUCATION' ? <Sparkles className="w-5 h-5" /> : <Building2 className="w-5 h-5" />}
                       </div>
                       <div>
-                        <p className="font-bold text-foreground">{tenant.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-foreground">{tenant.name}</p>
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-tighter ${
+                            tenant.tenant_type === 'EDUCATION' ? 'bg-indigo-500/10 text-indigo-600' : 'bg-emerald-500/10 text-emerald-600'
+                          }`}>
+                            {tenant.tenant_type}
+                          </span>
+                        </div>
                         <p className="text-[10px] text-muted-foreground font-mono">{tenant.id}</p>
                       </div>
                     </div>
@@ -140,7 +179,10 @@ export default function TenantsPage() {
                   </td>
                   <td className="px-6 py-5 text-right">
                     <div className="flex items-center justify-end gap-2">
-                       <button className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-all">
+                       <button 
+                        onClick={() => setEditingTenant(tenant)}
+                        className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-all"
+                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
@@ -157,6 +199,68 @@ export default function TenantsPage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editingTenant && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-card w-full max-w-md border border-border shadow-2xl rounded-3xl p-8 animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-black mb-6">Edit Tenant</h2>
+            <form onSubmit={handleUpdate} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Tenant Name</label>
+                <input
+                  autoFocus
+                  required
+                  value={editingTenant.name}
+                  onChange={(e) => setEditingTenant({ ...editingTenant, name: e.target.value })}
+                  className="w-full bg-muted/40 border-2 border-transparent focus:border-primary/20 focus:bg-card px-4 py-3 rounded-2xl outline-none transition-all font-semibold"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Organization Type</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTenant({ ...editingTenant, tenant_type: 'EDUCATION' })}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
+                      editingTenant.tenant_type === 'EDUCATION' ? 'bg-indigo-500 text-white' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    Education
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingTenant({ ...editingTenant, tenant_type: 'COMPANY' })}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
+                      editingTenant.tenant_type === 'COMPANY' ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    Company
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingTenant(null)}
+                  className="flex-1 py-4 bg-muted hover:bg-muted/80 rounded-2xl font-black transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  disabled={isUpdating}
+                  type="submit"
+                  className="flex-1 py-4 bg-primary text-primary-foreground hover:shadow-lg hover:shadow-primary/20 rounded-2xl font-black transition-all disabled:opacity-50"
+                >
+                  {isUpdating ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -28,7 +28,13 @@ export async function GET(request: Request) {
     }
 
     // 1. Resolve User and current Employee pointer
-    const userResult = await query('SELECT id, name, email, employee_id, role, tenant_id FROM users WHERE id = $1 AND tenant_id = $2', [userId, tenantId]);
+    const userResult = await query(
+      `SELECT u.id, u.name, u.email, u.employee_id, u.role, u.tenant_id, t.tenant_type 
+       FROM users u
+       JOIN tenants t ON u.tenant_id = t.id
+       WHERE u.id = $1 AND u.tenant_id = $2`, 
+      [userId, tenantId]
+    );
     const user = userResult.rows[0];
 
     if (!user) {
@@ -94,6 +100,7 @@ export async function GET(request: Request) {
       department: emp.department_name || 'N/A',
       designation: emp.designation_name || 'N/A',
       role: userRole || emp.role,
+      tenantType: user.tenant_type,
       bank_account: maskedAccount,
       joinDate: emp.join_date || emp.created_at,
       salary: {

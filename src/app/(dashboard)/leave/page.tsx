@@ -10,6 +10,8 @@ interface LeaveBalance {
   allocated_days: string;
   used_days: string;
   remaining_days: string;
+  accrued_so_far: string;
+  color?: string;
 }
 
 interface LeaveRequest {
@@ -45,8 +47,8 @@ export default function LeavePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const is_admin = user?.role?.toLowerCase() === 'admin';
-      const endpoint = is_admin ? '/api/leave/requests' : `/api/leave/requests?employeeId=${user?.employeeId}`;
+      const canManageLeave = ['admin', 'super_admin', 'global_admin', 'hr', 'hr_manager', 'hr_executive', 'hod', 'principal', 'director', 'manager'].includes(user?.role?.toLowerCase() || '');
+      const endpoint = canManageLeave ? '/api/leave/requests' : `/api/leave/requests?employeeId=${user?.employeeId}`;
       
       const promises = [
         fetch(endpoint),
@@ -54,7 +56,7 @@ export default function LeavePage() {
         fetch('/api/employees')
       ];
 
-      if (!is_admin && user?.employeeId) {
+      if (!canManageLeave && user?.employeeId) {
         promises.push(fetch(`/api/leave/balances?employeeId=${user.employeeId}`));
       }
 
@@ -64,7 +66,7 @@ export default function LeavePage() {
       if (data[0].success) setRequests(data[0].requests);
       if (data[1].success) setLeaveTypes(data[1].types);
       if (data[2].success) setEmployees(data[2].employees);
-      if (!is_admin && data[3]?.success) setBalances(data[3].balances);
+      if (!canManageLeave && data[3]?.success) setBalances(data[3].balances);
     } catch (err) {
       console.error(err);
     } finally {
@@ -135,13 +137,15 @@ export default function LeavePage() {
     pending: <Clock className="w-4 h-4 text-amber-500" />,
   };
 
-  return (
+    const canManageLeave = ['admin', 'super_admin', 'global_admin', 'hr', 'hr_manager', 'hr_executive', 'hod', 'principal', 'director', 'manager'].includes(user?.role?.toLowerCase() || '');
+
+    return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
           <CalendarOff className="w-7 h-7 text-primary" /> Leave Management
         </h1>
-        {user?.role?.toLowerCase() !== 'admin' && (
+        {!canManageLeave && (
           <button 
             onClick={() => setShowApplyModal(true)}
             className="bg-primary px-4 py-2 rounded-xl text-primary-foreground text-sm font-bold flex items-center gap-2 shadow-soft hover:scale-[1.02] transition-all"
@@ -151,28 +155,97 @@ export default function LeavePage() {
         )}
       </div>
 
-      {/* Balances */}
-      {user?.role?.toLowerCase() !== 'admin' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {balances.map((bal, idx) => (
-            <div key={idx} className="bg-card p-5 rounded-2xl border border-border relative overflow-hidden group shadow-soft">
-               <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <CalendarOff className="w-12 h-12 text-foreground" />
-               </div>
-               <p className="text-[10px] font-black text-muted-foreground uppercase mb-1 tracking-widest">{bal.type_name}</p>
-               <h3 className="text-2xl font-black text-foreground mb-2">{Number(bal.remaining_days)} Days</h3>
-               <div className="flex items-center gap-2 text-[10px] font-bold">
-                  <span className="text-muted-foreground">Total: {Number(bal.allocated_days)}</span>
-                  <span className="w-1 h-1 rounded-full bg-border" />
-                  <span className="text-muted-foreground">Used: {Number(bal.used_days)}</span>
-               </div>
+      {/* Leave Balance Dashboard */}
+      {!canManageLeave && (
+        <div className="bg-card/50 border border-border rounded-[2.5rem] p-8 shadow-xl backdrop-blur-md">
+          <div className="flex items-center gap-4 mb-10">
+            <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center">
+              <CheckCircle2 className="w-6 h-6 text-primary" />
             </div>
-          ))}
+            <h2 className="text-xl font-black text-foreground tracking-tight uppercase">Your Leave Balance</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {balances.map((bal, idx) => {
+              const isUnpaid = bal.type_code === 'UL';
+              const total = Number(bal.allocated_days) || 1;
+              const remaining = Number(bal.remaining_days);
+              const percentage = isUnpaid ? 100 : (remaining / total) * 100;
+              const color = bal.color || '#2563eb';
+
+              return (
+                <div key={idx} className="bg-[#151921] border border-white/5 rounded-[2rem] p-6 relative overflow-hidden group hover:border-primary/20 transition-all">
+                  <div className="flex justify-between items-start mb-6">
+                    <p className="text-[10px] font-black text-[#8E9AAF] uppercase tracking-widest">{bal.type_name}</p>
+                    <button className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline">View details</button>
+                  </div>
+
+                  {/* Circular Progress */}
+                  <div className="relative w-32 h-32 mx-auto mb-8">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle
+                        cx="64" cy="64" r="58"
+                        stroke="rgba(255,255,255,0.05)"
+                        strokeWidth="8"
+                        fill="transparent"
+                      />
+                      <circle
+                        cx="64" cy="64" r="58"
+                        stroke={color}
+                        strokeWidth="8"
+                        fill="transparent"
+                        strokeDasharray={364.4}
+                        strokeDashoffset={364.4 - (364.4 * percentage) / 100}
+                        strokeLinecap="round"
+                        className="transition-all duration-1000 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                      <span className="text-2xl font-black text-white leading-none">
+                        {isUnpaid ? '∞' : remaining}
+                      </span>
+                      <span className="text-[8px] font-black text-[#8E9AAF] uppercase tracking-widest mt-1">
+                        {isUnpaid ? 'Unlimited Access' : 'Days Available'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Details Grid */}
+                  <div className="grid grid-cols-2 gap-y-4 pt-4 border-t border-white/5">
+                    <div>
+                      <p className="text-[8px] font-black text-[#8E9AAF] uppercase tracking-widest mb-1">
+                        {isUnpaid ? 'Type' : 'Available'}
+                      </p>
+                      <p className="text-sm font-bold text-white">
+                        {isUnpaid ? 'Unpaid (LOP)' : `${remaining} days`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[8px] font-black text-[#8E9AAF] uppercase tracking-widest mb-1">Consumed</p>
+                      <p className="text-sm font-bold text-white">{Number(bal.used_days)} day</p>
+                    </div>
+                    <div>
+                      <p className="text-[8px] font-black text-[#8E9AAF] uppercase tracking-widest mb-1">
+                         {isUnpaid ? 'Status' : 'Accrued so far'}
+                      </p>
+                      <p className="text-sm font-bold text-white">
+                        {isUnpaid ? 'Unlimited' : `${Number(bal.accrued_so_far)} day`}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[8px] font-black text-[#8E9AAF] uppercase tracking-widest mb-1">Annual Quota</p>
+                      <p className="text-sm font-bold text-white">{isUnpaid ? 'Unlimited' : `${Number(bal.allocated_days)} days`}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* Approvals Section for Admins */}
-      {user?.role?.toLowerCase() === 'admin' && (
+      {/* Approvals Section for Admins and Managers */}
+      {canManageLeave && (
         <div className="bg-card rounded-2xl overflow-hidden mb-8 border border-border shadow-soft">
           <div className="p-6 border-b border-border bg-primary/5">
             <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
@@ -363,7 +436,7 @@ export default function LeavePage() {
                   onChange={e => setFormData({...formData, substitutionEmployeeId: e.target.value})}
                   className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-sm text-foreground focus:border-primary outline-none cursor-pointer"
                 >
-                  <option value="">Select Faculty Alternate</option>
+                  <option value="">Select Alternate</option>
                    {employees.filter(e => e.employeeId !== user?.employeeId).map(e => (
                      <option key={e.employeeId} value={e.employeeId}>{e.name} ({e.department})</option>
                    ))}

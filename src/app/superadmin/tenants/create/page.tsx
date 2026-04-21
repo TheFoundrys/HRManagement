@@ -15,6 +15,7 @@ export default function CreateTenantPage() {
     adminName: '',
     adminEmail: '',
     adminPassword: '',
+    tenantType: 'EDUCATION',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,6 +153,61 @@ export default function CreateTenantPage() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tenant Type Selection */}
+        <div className="bg-card p-8 rounded-3xl border border-border shadow-xl space-y-6">
+          <h2 className="text-xl font-black flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-600 text-sm">3</span>
+            Organization Type
+          </h2>
+          <p className="text-sm text-muted-foreground ml-10">This selects the default roles and structure for the new environment.</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div 
+              onClick={() => setFormData({ ...formData, tenantType: 'EDUCATION' })}
+              className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 group ${
+                formData.tenantType === 'EDUCATION' 
+                ? 'border-indigo-500 bg-indigo-500/5' 
+                : 'border-transparent bg-muted/40 hover:bg-muted/60'
+              }`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                formData.tenantType === 'EDUCATION' ? 'bg-indigo-500 text-white' : 'bg-muted text-muted-foreground group-hover:bg-muted'
+              }`}>
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground">Educational Institution</h3>
+                <p className="text-xs text-muted-foreground">Schools, Universities, Colleges</p>
+              </div>
+              <div className={`w-6 h-6 rounded-full border-4 transition-all ${
+                formData.tenantType === 'EDUCATION' ? 'border-indigo-500 bg-white' : 'border-muted'
+              }`} />
+            </div>
+
+            <div 
+              onClick={() => setFormData({ ...formData, tenantType: 'COMPANY' })}
+              className={`p-6 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-4 group ${
+                formData.tenantType === 'COMPANY' 
+                ? 'border-emerald-500 bg-emerald-500/5' 
+                : 'border-transparent bg-muted/40 hover:bg-muted/60'
+              }`}
+            >
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                formData.tenantType === 'COMPANY' ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground group-hover:bg-muted'
+              }`}>
+                <Building2 className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-foreground">Corporate Company</h3>
+                <p className="text-xs text-muted-foreground">Offices, Factories, Startups</p>
+              </div>
+              <div className={`w-6 h-6 rounded-full border-4 transition-all ${
+                formData.tenantType === 'COMPANY' ? 'border-emerald-500 bg-white' : 'border-muted'
+              }`} />
             </div>
           </div>
         </div>

@@ -13,6 +13,28 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<any>(null);
+  const [tenantType, setTenantType] = useState<'EDUCATION' | 'COMPANY'>('EDUCATION');
+
+  const ROLES = {
+    COMPANY: [
+      { id: 'ADMIN', label: 'Admin/CEO' },
+      { id: 'EXECUTIVE', label: 'Executives (CTO/COO/CFO)' },
+      { id: 'PARTNER', label: 'Partner' },
+      { id: 'TEAM_OPS', label: 'HR / Team Ops' },
+      { id: 'MANAGER', label: 'Manager' },
+      { id: 'TEAM_LEAD', label: 'Team Lead (TL)' },
+      { id: 'EMPLOYEE', label: 'Employee' }
+    ],
+    EDUCATION: [
+      { id: 'ADMIN', label: 'Admin' },
+      { id: 'PRINCIPAL', label: 'Principal' },
+      { id: 'DIRECTOR', label: 'Director' },
+      { id: 'HOD', label: 'Head of Department (HOD)' },
+      { id: 'FACULTY', label: 'Faculty' },
+      { id: 'STAFF', label: 'Academic Staff' },
+      { id: 'NON_TEACHING', label: 'Non-Teaching Support' }
+    ]
+  };
 
   useEffect(() => {
     async function fetchDetails() {
@@ -24,6 +46,15 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
         } else {
           alert(data.error || 'Failed to load employee');
           router.push('/employees');
+        }
+
+        // Fetch Me for Tenant Type
+        const meRes = await fetch('/api/employees/me');
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.success) {
+            setTenantType(meData.employee.tenantType || 'EDUCATION');
+          }
         }
       } catch (err) {
         alert('Error fetching employee information');
@@ -138,15 +169,13 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Access Protocol (Role)</label>
                 <select 
-                  className="w-full p-3 bg-muted/50 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none transition-all text-sm font-bold"
+                  className="w-full p-3 bg-muted/50 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none transition-all text-sm font-bold cursor-pointer"
                   value={formData.role}
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
                 >
-                  <option value="TEACHING">Teaching</option>
-                  <option value="NON-TEACHING">Non-Teaching</option>
-                  <option value="HOD">HOD</option>
-                  <option value="HR">HR</option>
-                  <option value="ADMIN">Admin</option>
+                  {ROLES[tenantType].map(role => (
+                    <option key={role.id} value={role.id}>{role.label}</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-1">

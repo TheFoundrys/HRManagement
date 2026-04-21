@@ -22,8 +22,8 @@ export async function GET(request: Request) {
       ] = await Promise.all([
         query('SELECT COUNT(*) FROM employees WHERE tenant_id = $1', [tenantId]),
         query('SELECT status FROM attendance WHERE employee_id IN (SELECT id FROM employees WHERE tenant_id = $1) AND date = $2', [tenantId, today]),
-        query("SELECT COUNT(*) FROM leaves l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1 AND l.status = 'PENDING'", [tenantId]),
-        query('SELECT l.*, e.university_id FROM leaves l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1 ORDER BY l.created_at DESC LIMIT 5', [tenantId]),
+        query("SELECT COUNT(*) FROM leave_requests l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1 AND l.status = 'pending'", [tenantId]),
+        query('SELECT l.*, e.university_id FROM leave_requests l JOIN employees e ON l.employee_id = e.id WHERE e.tenant_id = $1 ORDER BY l.created_at DESC LIMIT 5', [tenantId]),
         query('SELECT d.name as _id, COUNT(e.id) as count FROM employees e JOIN departments d ON e.department_id = d.id WHERE e.tenant_id = $1 GROUP BY d.name ORDER BY count DESC', [tenantId]),
         query(`SELECT a.*, e.first_name || ' ' || e.last_name as employee_name, e.university_id as employee_id 
                FROM attendance a 
@@ -85,8 +85,8 @@ export async function GET(request: Request) {
           recentLeaves: recentLeaves.map(l => ({ 
             ...l, 
             employeeId: l.university_id, // Use bridge ID for frontend
-            leaveType: l.leave_type.toLowerCase(),
-            status: l.status.toLowerCase()
+            leaveType: (l.type_name || 'General'),
+            status: (l.status || 'pending').toLowerCase()
           })),
         },
       });
@@ -110,7 +110,7 @@ export async function GET(request: Request) {
 
     const [attResult, leaveResult] = await Promise.all([
       query('SELECT * FROM attendance WHERE employee_id = $1 AND date >= $2 ORDER BY date DESC', [employee.id, firstOfMonth]),
-      query('SELECT l.*, lt.name as type_name FROM leave_requests l JOIN leave_types lt ON l.leave_type_id = lt.id WHERE l.employee_id = $1 ORDER BY l.created_at DESC LIMIT 10', [empIdStr]),
+      query('SELECT l.*, lt.name as type_name FROM leave_requests l JOIN leave_types lt ON l.leave_type_id = lt.id WHERE l.employee_id = $1 ORDER BY l.created_at DESC LIMIT 10', [employee.id]),
     ]);
 
     const myAttendance = attResult.rows;

@@ -3,7 +3,12 @@ import type { NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
 import { getRequiredPermissionForPath, hasPermission } from '@/lib/auth/rbac';
 
-const publicPaths = ['/login', '/register', '/api/auth/login', '/api/auth/register', '/api/biometric/push', '/api/attendance/ingest'];
+const publicPaths = [
+  '/login', '/register', '/forgot-password', '/reset-password',
+  '/api/auth/login', '/api/auth/register', '/api/auth/forgot-password', 
+  '/api/auth/reset-password', '/api/auth/verify',
+  '/api/biometric/push', '/api/attendance/ingest'
+];
 
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
