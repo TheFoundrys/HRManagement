@@ -57,7 +57,7 @@ export default function EmployeesPage() {
       if (meRes.ok) {
         const meData = await meRes.json();
         if (meData.success) {
-          const type = meData.employee.tenantType || 'COMPANY';
+          const type: 'COMPANY' | 'EDUCATION' = meData.employee.tenantType === 'EDUCATION' ? 'EDUCATION' : 'COMPANY';
           setTenantType(type);
           setForm(f => ({ ...f, role: ROLES[type][ROLES[type].length - 1].id }));
         }
