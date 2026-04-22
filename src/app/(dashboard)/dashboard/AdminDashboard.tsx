@@ -8,9 +8,9 @@ export default function AdminDashboard({ data }: { data: any }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { label: 'Total Workforce', value: stats.totalEmployees, icon: Users, color: 'primary' },
-          { label: 'Active Today', value: stats.presentToday, icon: UserCheck, color: 'emerald-500' },
-          { label: 'Leave Requests', value: stats.pendingLeaves, icon: CalendarOff, color: 'amber-500' }
+          { label: 'Total Staff', value: stats.totalEmployees, icon: Users, color: 'primary' },
+          { label: 'Present Today', value: stats.presentToday, icon: UserCheck, color: 'emerald-500' },
+          { label: 'Pending Leaves', value: stats.pendingLeaves, icon: CalendarOff, color: 'amber-500' }
         ].map((s, i) => (
           <div key={i} className="bg-card border border-border p-6 rounded-2xl flex items-center gap-5 shadow-soft hover:-translate-y-1 transition-all duration-300">
             <div className={`p-4 bg-${s.color === 'primary' ? 'primary' : s.color}/10 text-${s.color === 'primary' ? 'primary' : s.color} rounded-xl`}>
@@ -39,7 +39,7 @@ export default function AdminDashboard({ data }: { data: any }) {
             </div>
           )) : (
             <div className="py-12 text-center border border-dashed border-border rounded-xl text-muted-foreground text-sm font-medium">
-               Awaiting systematic activity...
+               Waiting for live activity...
             </div>
           )}
         </div>

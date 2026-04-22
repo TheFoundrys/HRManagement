@@ -1,16 +1,36 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import { getTenantId } from '@/lib/utils/tenant';
+import { hasPermission } from '@/lib/auth/rbac';
+import { verifyToken } from '@/lib/auth/jwt';
+import { cookies } from 'next/headers';
 
 export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const payload = await verifyToken(token);
+    if (!payload) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
-    const employeeId = searchParams.get('employeeId');
+    let employeeId = searchParams.get('employeeId');
     const status = searchParams.get('status');
     const month = searchParams.get('month');
     const year = searchParams.get('year');
+
+    const isAdmin = hasPermission(payload.role, 'MANAGE_ATTENDANCE');
+    
+    // Security: If not admin, force employeeId to be the current user's employeeId
+    if (!isAdmin) {
+      if (!payload.employeeId) {
+        return NextResponse.json({ success: true, attendance: [] }); // No employee profile linked
+      }
+      employeeId = payload.employeeId;
+    }
 
     // Join with employees and tenant_users to get hardware mapping
     let queryString = `
@@ -77,6 +97,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const tenantId = await getTenantId(request);
+    const cookieStore = await cookies();
+    const token = cookieStore.get('auth-token')?.value;
+    if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    const payload = await verifyToken(token);
+    if (!payload || !hasPermission(payload.role, 'MANAGE_ATTENDANCE')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { employeeId, date, checkIn, checkOut, status, notes } = body;
 

@@ -20,31 +20,36 @@ export type Permission =
   | 'VIEW_LEAVE'
   | 'MANAGE_LEAVE'
   | 'MANAGE_ADMINS' // Exclusive Super Admin permission
-  | 'VIEW_NON_TEACHING_DASHBOARD'; // Exclusive Non-Teaching permission
+  | 'VIEW_NON_TEACHING_DASHBOARD' // Exclusive Non-Teaching permission
+  | 'MANAGE_SUPPORT_REQUESTS';
 
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   SUPER_ADMIN: [
     'VIEW_ALL_EMPLOYEES', 'MANAGE_EMPLOYEES', 'MANAGE_PAYROLL', 'VIEW_OWN_PAYSLIP', 
     'MANAGE_BIOMETRICS', 'MANAGE_NETWORK_SECURITY', 'MANAGE_SCHEDULING',
     'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'MANAGE_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE',
-    'MANAGE_ADMINS'
+    'MANAGE_ADMINS', 'MANAGE_SUPPORT_REQUESTS'
   ],
   GLOBAL_ADMIN: [
-    'VIEW_ALL_EMPLOYEES', 'MANAGE_EMPLOYEES', 'MANAGE_PAYROLL', 'VIEW_OWN_PAYSLIP', 
+    'VIEW_ALL_EMPLOYEES', 'MANAGE_EMPLOYEES', 'VIEW_OWN_PAYSLIP',
     'MANAGE_BIOMETRICS', 'MANAGE_NETWORK_SECURITY', 'MANAGE_SCHEDULING',
-    'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'MANAGE_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE'
+    'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'MANAGE_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE',
+    'MANAGE_SUPPORT_REQUESTS'
   ],
   ADMIN: [
     'VIEW_ALL_EMPLOYEES', 'MANAGE_EMPLOYEES', 'MANAGE_PAYROLL', 'VIEW_OWN_PAYSLIP', 
-    'MANAGE_BIOMETRICS', 'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'MANAGE_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE'
+    'MANAGE_BIOMETRICS', 'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'MANAGE_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE',
+    'MANAGE_SUPPORT_REQUESTS'
   ],
   HR_MANAGER: [
     'VIEW_ALL_EMPLOYEES', 'MANAGE_EMPLOYEES', 'MANAGE_PAYROLL', 'VIEW_OWN_PAYSLIP', 
-    'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE'
+    'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE',
+    'MANAGE_SUPPORT_REQUESTS'
   ],
   HR: [
     'VIEW_ALL_EMPLOYEES', 'MANAGE_EMPLOYEES', 'MANAGE_PAYROLL', 'VIEW_OWN_PAYSLIP', 
-    'VIEW_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE'
+    'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE',
+    'MANAGE_SUPPORT_REQUESTS'
   ],
   HR_EXECUTIVE: [
     'VIEW_ALL_EMPLOYEES', 'VIEW_OWN_PAYSLIP', 'VIEW_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE'
@@ -53,7 +58,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'VIEW_ALL_EMPLOYEES', 'MANAGE_PAYROLL', 'VIEW_OWN_PAYSLIP', 'VIEW_ATTENDANCE'
   ],
   IT_ADMIN: [
-    'VIEW_OWN_PAYSLIP', 'MANAGE_BIOMETRICS', 'MANAGE_NETWORK_SECURITY', 'VIEW_ATTENDANCE'
+    'VIEW_OWN_PAYSLIP', 'MANAGE_BIOMETRICS', 'MANAGE_NETWORK_SECURITY', 'VIEW_ATTENDANCE', 'VIEW_LEAVE'
   ],
   LEARNING_ADMIN: [
     'VIEW_OWN_PAYSLIP', 'MANAGE_SCHEDULING', 'VIEW_ATTENDANCE'
@@ -65,7 +70,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'VIEW_OWN_PAYSLIP', 'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE'
   ],
   HOD: [
-    'VIEW_ALL_EMPLOYEES', 'VIEW_OWN_PAYSLIP', 'MANAGE_PAYROLL',
+    'VIEW_OWN_PAYSLIP',
     'VIEW_TEAM', 'MANAGE_TEAM', 'VIEW_ATTENDANCE', 'VIEW_LEAVE', 'MANAGE_LEAVE'
   ],
   PRINCIPAL: [
@@ -98,7 +103,7 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
 };
 
 export function hasPermission(role: string, permission: Permission): boolean {
-  const normalizedRole = (role || '').toUpperCase() as Role;
+  const normalizedRole = (role || '').toUpperCase().replace(/[-\s]/g, '_') as Role;
   const permissions = ROLE_PERMISSIONS[normalizedRole] || [];
   return permissions.includes(permission);
 }
@@ -117,7 +122,9 @@ export const ROUTE_PERMISSIONS: { pathPattern: RegExp, permission: Permission }[
   { pathPattern: /^\/api\/admin\/attendance\/network/i, permission: 'MANAGE_NETWORK_SECURITY' },
   { pathPattern: /^\/api\/biometric\/users/i, permission: 'MANAGE_BIOMETRICS' },
   { pathPattern: /^\/api\/leave\/approve/i, permission: 'MANAGE_LEAVE' },
-  { pathPattern: /^\/api\/leave\/requests/i, permission: 'VIEW_LEAVE' }
+  { pathPattern: /^\/api\/leave\/requests/i, permission: 'VIEW_LEAVE' },
+  { pathPattern: /^\/api\/attendance\/process/i, permission: 'MANAGE_ATTENDANCE' },
+  { pathPattern: /^\/api\/attendance/i, permission: 'VIEW_ATTENDANCE' }
 ];
 
 export function getRequiredPermissionForPath(pathname: string): Permission | null {

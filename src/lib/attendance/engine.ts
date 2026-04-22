@@ -51,69 +51,50 @@ export async function batchInsertLogs(logs: any[], tenantId: string, deviceId: s
  * Standardized Mapping: biometric_logs.device_user_id → employees.biometric_id
  */
 export async function processAttendance(tenantId: string, dateStr: string) {
-  // 1. Get all unique biometric IDs from logs for the day
-  const logsResult = await query(
-    `SELECT DISTINCT device_user_id 
-     FROM biometric_logs 
-     WHERE tenant_id = $1 AND DATE(timestamp) = $2`,
-    [tenantId, dateStr]
-  );
-
-  let recordCount = 0;
-  let skipCount = 0;
-
-  for (const { device_user_id } of logsResult.rows) {
-    // 2. Direct Identity Mapping (MANDATORY) - Fetch UUID 'id'
-    const empResult = await query(
-      `SELECT id FROM employees 
-       WHERE tenant_id = $1 AND biometric_id = $2`,
-      [tenantId, device_user_id]
-    );
-    
-    const employee = empResult.rows[0];
-
-    // If no mapping found, skip log for debugging
-    if (!employee) {
-      console.warn(`[ENGINE] Skipping unmapped device_user_id: ${device_user_id} for tenant: ${tenantId}`);
-      skipCount++;
-      continue;
-    }
-
-    // 3. Simple Punch Logic: First-In, Last-Out
-    const dayLogsResult = await query(
-      `SELECT timestamp FROM biometric_logs 
-       WHERE device_user_id = $1 AND tenant_id = $2 AND DATE(timestamp) = $3
-       ORDER BY timestamp ASC`,
-      [device_user_id, tenantId, dateStr]
-    );
-    const dayLogs = dayLogsResult.rows;
-
-    if (dayLogs.length === 0) continue;
-
-    const firstPunch = new Date(dayLogs[0].timestamp);
-    const lastPunch = dayLogs.length > 1 ? new Date(dayLogs[dayLogs.length - 1].timestamp) : null;
-    const workingHours = lastPunch ? (lastPunch.getTime() - firstPunch.getTime()) / (1000 * 60 * 60) : 0;
-    
-    // 4. Update core attendance record using UUID employee.id
-    await query(
-      `INSERT INTO attendance (employee_id, tenant_id, date, check_in, check_out, working_hours, source, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'biometric', 'PRESENT')
+  try {
+    // Optimized: Single query to calculate punches for all mapped employees at once
+    const result = await query(
+      `WITH daily_punches AS (
+         SELECT 
+           e.id as employee_uuid,
+           bl.device_user_id,
+           MIN(bl.timestamp) as first_punch,
+           MAX(bl.timestamp) as last_punch
+         FROM biometric_logs bl
+         JOIN employees e ON bl.device_user_id = e.biometric_id::TEXT AND bl.tenant_id::UUID = $1::UUID
+         WHERE bl.tenant_id::UUID = $1::UUID AND bl.timestamp >= $2::DATE AND bl.timestamp < ($2::DATE + INTERVAL '1 day')
+         GROUP BY e.id, bl.device_user_id
+       )
+       INSERT INTO attendance (employee_id, tenant_id, date, check_in, check_out, working_hours, source, status)
+       SELECT 
+         employee_uuid, 
+         $1, 
+         $2, 
+         first_punch, 
+         CASE WHEN first_punch = last_punch THEN NULL ELSE last_punch END, 
+         ROUND(EXTRACT(EPOCH FROM (last_punch - first_punch)) / 3600, 2),
+         'biometric',
+         'PRESENT'
+       FROM daily_punches
        ON CONFLICT (employee_id, tenant_id, date) DO UPDATE SET
          check_in = EXCLUDED.check_in,
          check_out = EXCLUDED.check_out,
          working_hours = EXCLUDED.working_hours,
          status = 'PRESENT',
-         updated_at = NOW()`,
-      [employee.id, tenantId, dateStr, firstPunch, lastPunch, Math.round(workingHours * 100) / 100]
+         updated_at = NOW()
+       RETURNING employee_id`,
+      [tenantId, dateStr]
     );
-    recordCount++;
-  }
 
-  return { 
-    processed: logsResult.rows.length, 
-    records: recordCount, 
-    skipped: skipCount 
-  };
+    return { 
+      processed: result.rowCount, 
+      records: result.rowCount, 
+      skipped: 0 // Skipped unmapped IDs are handled gracefully by the JOIN filter
+    };
+  } catch (error) {
+    console.error(`[ENGINE] Failed to process attendance for ${dateStr}:`, error);
+    throw error;
+  }
 }
 
 /**

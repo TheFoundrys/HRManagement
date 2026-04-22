@@ -35,11 +35,11 @@ export default function NetworkPoliciesPage() {
     <div className="max-w-auto space-y-8 animate-fade-in">
       <header className="flex justify-between items-center pb-6 border-b border-border">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3"><Shield className="text-primary" /> Network Security</h1>
-          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] mt-2 leading-none">Access Restriction Protocols</p>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3"><Shield className="text-primary" /> Approved Networks</h1>
+          <p className="text-muted-foreground text-[10px] font-black uppercase tracking-[0.2em] mt-2 leading-none">Restrict clock-in to specific locations</p>
         </div>
         <button onClick={toggle} className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${settings.enable_ip_validation ? 'bg-primary text-primary-foreground shadow-soft shadow-primary/20' : 'bg-muted text-muted-foreground border border-border'}`}>
-          IP Validation: {settings.enable_ip_validation ? 'Active' : 'Disabled'}
+          Location Check: {settings.enable_ip_validation ? 'Enabled' : 'Disabled'}
         </button>
       </header>
 
@@ -50,34 +50,34 @@ export default function NetworkPoliciesPage() {
               <div key={p.id} className="p-6 flex justify-between items-center hover:bg-muted/30 group">
                 <div className="flex gap-4 items-center">
                   <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center text-primary border border-border shadow-inner"><Shield size={18} /></div>
-                  <div><p className="font-mono text-foreground text-sm font-black">{p.ip_address_or_range}</p><p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">{p.label || 'Default Subnet'}</p></div>
+                  <div><p className="font-mono text-foreground text-sm font-black">{p.ip_address_or_range}</p><p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">{p.label || 'Default Location'}</p></div>
                 </div>
                 <button onClick={() => fetch(`/api/admin/attendance/network/${p.id}`, { method: 'DELETE' }).then(fetchInit)} className="text-muted-foreground hover:text-danger opacity-0 group-hover:opacity-100 p-2 transition-all"><Trash2 size={16} /></button>
               </div>
             )) : (
               <div className="p-16 flex flex-col items-center justify-center text-center">
                  <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4 text-muted-foreground/30"><Globe size={32} /></div>
-                 <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">Open Network Configuration</p>
-                 <p className="text-xs text-muted-foreground/60 mt-2 font-medium">All IP ranges currently permitted. Onboard a policy to restrict access.</p>
+                  <p className="text-sm font-black text-muted-foreground uppercase tracking-widest">Global Network Access</p>
+                  <p className="text-xs text-muted-foreground/60 mt-2 font-medium">Any network currently permitted. Add a rule to restrict access.</p>
               </div>
             )}
           </div>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6 h-fit space-y-6 shadow-soft">
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border pb-4">New Access Rule</h3>
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground border-b border-border pb-4">New Authorized Location</h3>
           <form onSubmit={add} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Terminal IP / CIDR</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">IP Address / Range</label>
               <input placeholder="192.168.1.0/24" required value={form.ip} onChange={e => setForm({ ...form, ip: e.target.value })} className="w-full bg-muted border border-border p-4 rounded-xl text-sm text-foreground focus:border-primary outline-none font-mono transition-all" />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Protocol Identifier</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Location Name</label>
               <input placeholder="e.g. Campus Wi-Fi" required value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} className="w-full bg-muted border border-border p-4 rounded-xl text-sm text-foreground focus:border-primary outline-none transition-all" />
             </div>
-            <button type="submit" className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-black text-xs uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-primary/90 shadow-soft shadow-primary/20 transition-all"><Plus size={16} /> Deploy Policy</button>
+            <button type="submit" className="w-full bg-primary text-primary-foreground py-4 rounded-xl font-black text-xs uppercase tracking-widest flex justify-center items-center gap-2 hover:bg-primary/90 shadow-soft shadow-primary/20 transition-all"><Plus size={16} /> Save Location</button>
           </form>
-          <div className="bg-primary/5 border border-primary/10 rounded-2xl p-5"><p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Subnet Guard</p><p className="text-[10px] text-muted-foreground leading-relaxed font-bold">Policy changes are propagated immediately across the entire university network node.</p></div>
+          <div className="bg-primary/5 border border-primary/10 rounded-2xl p-5"><p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Live Protection</p><p className="text-[10px] text-muted-foreground leading-relaxed font-bold">Changes take effect immediately across all employee portals.</p></div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Mail, Phone, MapPin, Building, Briefcase, Calendar, CreditCard, ShieldAlert, Loader2, CheckCircle2, Lock, Globe, User, MessageSquare, AlertCircle, X, Send } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/authStore';
+import { hasPermission } from '@/lib/auth/rbac';
 
 export default function ProfilePage() {
   const { user } = useAuthStore();
@@ -10,6 +11,7 @@ export default function ProfilePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [requestCategory, setRequestCategory] = useState('');
   const [requestDescription, setRequestDescription] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -50,23 +52,30 @@ export default function ProfilePage() {
   if (loading) return <div className="flex justify-center p-24"><Loader2 className="animate-spin text-primary w-8 h-8"/></div>;
 
   const sections = [
-    { t: 'Employment', i: Briefcase, f: [
-        { l: 'ID', v: profile?.employee_id || profile?.university_id, i: Lock },
+    { t: 'Employment Details', i: Briefcase, f: [
+        { l: 'Employee ID', v: profile?.employee_id || profile?.university_id, i: Lock },
         { l: 'Department', v: profile?.department_name || profile?.department, i: Building },
         { l: 'Role', v: profile?.designation_name || profile?.designation, i: User },
-        { l: 'Joined', v: profile?.joining_date ? new Date(profile.joining_date).toLocaleDateString() : '—', i: Calendar },
+        { l: 'Joining Date', v: profile?.joining_date ? new Date(profile.joining_date).toLocaleDateString() : '—', i: Calendar },
     ]},
-    { t: 'Communications', i: Mail, f: [
-        { l: 'Email', v: profile?.email || user?.email, i: Mail },
-        { l: 'Dial', v: profile?.phone, i: Phone },
-        { l: 'Spatial', v: profile?.address, i: MapPin },
-    ]},
-    { t: 'Fiscal Credentials', i: CreditCard, f: [
-        { l: 'Bank', v: profile?.bank_name, i: Globe },
-        { l: 'Account', v: profile?.bank_account, i: CreditCard },
-        { l: 'IFSC', v: profile?.bank_ifsc, i: ShieldAlert },
+    { t: 'Contact Information', i: Mail, f: [
+        { l: 'Email Address', v: profile?.email || user?.email, i: Mail },
+        { l: 'Phone Number', v: profile?.phone, i: Phone },
+        { l: 'Current Address', v: profile?.address, i: MapPin },
     ]}
   ];
+
+  // Financial info only for Payroll/HR Admins
+  const canSeeFinancial = hasPermission(user?.role || '', 'MANAGE_PAYROLL');
+  if (canSeeFinancial) {
+    sections.push({ 
+      t: 'Financial Details', i: CreditCard, f: [
+        { l: 'Bank Name', v: profile?.bank_name, i: Globe },
+        { l: 'Account Number', v: profile?.bank_account, i: CreditCard },
+        { l: 'IFSC Code', v: profile?.bank_ifsc, i: ShieldAlert },
+      ]
+    });
+  }
 
   return (
     <div className="max-w-auto space-y-8 animate-fade-in pb-20">
@@ -85,32 +94,44 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className={`grid grid-cols-1 ${sections.length > 2 ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-8`}>
         {sections.map((s, i) => (
-          <div key={i} className="bg-card border border-border rounded-2xl overflow-hidden shadow-soft flex flex-col">
-            <div className="px-6 py-4 border-b border-border bg-muted/30 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <s.i className="w-4 h-4 text-primary" />
-                <h2 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{s.t}</h2>
-              </div>
-              <button 
-                onClick={() => openRequestModal(s.t)}
-                className="text-[9px] font-black uppercase bg-primary/10 text-primary px-2 py-1 rounded-md hover:bg-primary hover:text-white transition-all flex items-center gap-1"
-              >
-                <MessageSquare size={10} /> Request Change
-              </button>
-            </div>
-            <div className="p-8 space-y-8 flex-1">
-              {s.f.map((f, fi) => (
-                <div key={fi} className="space-y-1">
-                  <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest flex items-center gap-2 leading-none"><f.i className="w-2.5 h-2.5" /> {f.l}</p>
-                  <p className={`text-xs font-bold ${f.v ? 'text-foreground' : 'text-muted-foreground/60 italic'}`}>{f.v || 'Not Indexed'}</p>
+          <div key={i} className="bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-soft flex flex-col group hover:border-primary/30 transition-all duration-300">
+             <div className="px-8 py-6 border-b border-border bg-muted/20 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   <div className="p-2.5 rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                      <s.i className="w-5 h-5" />
+                   </div>
+                   <h2 className="text-sm font-black text-foreground uppercase tracking-widest">{s.t}</h2>
                 </div>
-              ))}
-            </div>
-            <div className="px-8 py-4 bg-muted/20 border-t border-border mt-auto">
-               <p className="text-[8px] text-muted-foreground uppercase font-bold flex items-center gap-2"><Lock size={8} /> Admin Managed Section</p>
-            </div>
+                <button 
+                  onClick={() => openRequestModal(s.t)}
+                  className="p-2 text-muted-foreground hover:text-primary transition-colors"
+                  title="Request Change"
+                >
+                  <MessageSquare size={16} />
+                </button>
+             </div>
+             
+             <div className="p-8 space-y-8 flex-1">
+               {s.f.map((f, fi) => (
+                 <div key={fi} className="space-y-2">
+                   <div className="flex items-center gap-2">
+                      <f.i className="w-3 h-3 text-muted-foreground" />
+                      <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest leading-none">{f.l}</p>
+                   </div>
+                   <p className={`text-sm font-bold pl-5 ${f.v ? 'text-foreground' : 'text-muted-foreground/60 italic'}`}>
+                     {f.v || 'Not Provided'}
+                   </p>
+                 </div>
+               ))}
+             </div>
+
+             <div className="px-8 py-4 bg-muted/10 border-t border-border mt-auto">
+                <p className="text-[8px] text-muted-foreground uppercase font-bold flex items-center gap-2">
+                  <Lock size={8} /> System Managed Secure Data
+                </p>
+             </div>
           </div>
         ))}
       </div>
@@ -125,7 +146,7 @@ export default function ProfilePage() {
                    <MessageSquare className="w-5 h-5" />
                  </div>
                  <div>
-                   <h2 className="text-sm font-black uppercase tracking-widest">Raise Support Request</h2>
+                   <h2 className="text-sm font-black uppercase tracking-widest">Submit Change Request</h2>
                    <p className="text-[10px] text-muted-foreground uppercase font-bold">{requestCategory} Update</p>
                  </div>
                </div>

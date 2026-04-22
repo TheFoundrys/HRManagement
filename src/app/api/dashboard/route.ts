@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import { getTenantId } from '@/lib/utils/tenant';
+import { hasPermission } from '@/lib/auth/rbac';
 
 export async function GET(request: Request) {
   try {
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
     const today = new Date().toISOString().split('T')[0];
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
-    if (userRole.toLowerCase() === 'admin') {
+    if (hasPermission(userRole, 'VIEW_ALL_EMPLOYEES')) {
       const [
         empCountResult,
         todayAttendanceResult,

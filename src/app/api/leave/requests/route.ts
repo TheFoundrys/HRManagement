@@ -1,15 +1,16 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import { getTenantId } from '@/lib/utils/tenant';
+import { hasPermission } from '@/lib/auth/rbac';
 
 export async function GET(request: Request) {
   try {
     const tenantId = await getTenantId(request);
     const { searchParams } = new URL(request.url);
     let employeeId = searchParams.get('employeeId');
-    const userRole = (request.headers.get('x-user-role') || '').toLowerCase();
+    const userRole = request.headers.get('x-user-role') || '';
     
-    const canManageLeave = ['admin', 'super_admin', 'global_admin', 'hr', 'hr_manager', 'hr_executive', 'hod', 'principal', 'director', 'manager'].includes(userRole);
+    const canManageLeave = hasPermission(userRole, 'MANAGE_LEAVE');
 
     // Security: If not an approver/admin, force their own employeeId
     if (!canManageLeave) {

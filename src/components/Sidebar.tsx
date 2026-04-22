@@ -4,27 +4,28 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { ThemeToggle } from './ThemeToggle';
+import { Permission, hasPermission } from '@/lib/auth/rbac';
 import {
-  LayoutDashboard, Users, Clock, Calendar, Wallet,
+  LayoutDashboard, Users, Clock, Wallet,
   LogOut, GraduationCap, ChevronLeft, Menu, Fingerprint,
-  FileText, UserCircle, Shield, CalendarDays, CalendarOff,
-  MessageSquare, Building2
+  FileText, UserCircle, Shield,
+  MessageSquare, Building2, CalendarOff
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'IT_ADMIN', 'PAYROLL_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
-  { href: '/team', label: 'My Team', icon: Users, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR', 'MANAGER', 'TEAM_LEAD', 'HOD', 'PRINCIPAL', 'DIRECTOR'] },
-  { href: '/employees', label: 'Employees', icon: Users, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR', 'PRINCIPAL', 'DIRECTOR'] },
-  { href: '/attendance', label: 'Attendance', icon: Clock, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'IT_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
-  { href: '/leave', label: 'Leave', icon: CalendarOff, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
-  { href: '/payslips', label: 'Payslips', icon: FileText, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'PAYROLL_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
-  { href: '/salary-structure', label: 'Salary Structure', icon: Wallet, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR', 'PAYROLL_ADMIN', 'PRINCIPAL', 'DIRECTOR'] },
-  { href: '/biometric', label: 'Biometric', icon: Fingerprint, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'IT_ADMIN'] },
-  { href: '/admin/attendance/network', label: 'Network Security', icon: Shield, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'IT_ADMIN'] },
-  { href: '/admin/requests', label: 'Support Requests', icon: MessageSquare, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR'] },
-  { href: '/superadmin/tenants', label: 'Tenants', icon: Building2, roles: ['SUPER_ADMIN'] },
-  { href: '/profile', label: 'Profile', icon: UserCircle, roles: ['SUPER_ADMIN', 'GLOBAL_ADMIN', 'ADMIN', 'HR_MANAGER', 'HR_EXECUTIVE', 'HR', 'IT_ADMIN', 'PAYROLL_ADMIN', 'MANAGER', 'TEAM_LEAD', 'EMPLOYEE', 'HOD', 'PRINCIPAL', 'DIRECTOR', 'FACULTY', 'STAFF', 'NON_TEACHING'] },
+const navItems: { href: string; label: string; icon: any; permission?: Permission }[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }, // Dashboard is public for all authenticated roles
+  { href: '/team', label: 'My Team', icon: Users, permission: 'MANAGE_TEAM' },
+  { href: '/employees', label: 'Employees', icon: Users, permission: 'VIEW_ALL_EMPLOYEES' },
+  { href: '/attendance', label: 'Attendance', icon: Clock, permission: 'VIEW_ATTENDANCE' },
+  { href: '/leave', label: 'Leave', icon: CalendarOff, permission: 'VIEW_LEAVE' },
+  { href: '/payslips', label: 'Payslips', icon: FileText, permission: 'VIEW_OWN_PAYSLIP' },
+  { href: '/salary-structure', label: 'Salary Structure', icon: Wallet, permission: 'MANAGE_PAYROLL' },
+  { href: '/biometric', label: 'Biometric', icon: Fingerprint, permission: 'MANAGE_BIOMETRICS' },
+  { href: '/admin/attendance/network', label: 'Network Security', icon: Shield, permission: 'MANAGE_NETWORK_SECURITY' },
+  { href: '/admin/requests', label: 'Support Requests', icon: MessageSquare, permission: 'MANAGE_SUPPORT_REQUESTS' },
+  { href: '/superadmin/tenants', label: 'Tenants', icon: Building2, permission: 'MANAGE_ADMINS' },
+  { href: '/profile', label: 'Profile', icon: UserCircle }, // Profile is public
 ];
 
 export function Sidebar() {
@@ -33,13 +34,12 @@ export function Sidebar() {
   const { user, logout } = useAuthStore();
   const [collapsed, setCollapsed] = useState(false);
 
-  const baseRole = (user?.role || 'STAFF').toUpperCase();
   const filteredNav = useMemo(() => {
     return navItems.filter((item) => {
-      if (baseRole === 'SUPER_ADMIN') return true;
-      return item.roles.includes(baseRole);
+      if (!item.permission) return true;
+      return hasPermission(user?.role || 'STAFF', item.permission);
     });
-  }, [baseRole]);
+  }, [user?.role]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });

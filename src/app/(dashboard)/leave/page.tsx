@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { CalendarOff, Plus, Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { hasPermission } from '@/lib/auth/rbac';
 
 interface LeaveBalance {
   type_name: string;
@@ -47,7 +48,7 @@ export default function LeavePage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const canManageLeave = ['admin', 'super_admin', 'global_admin', 'hr', 'hr_manager', 'hr_executive', 'hod', 'principal', 'director', 'manager'].includes(user?.role?.toLowerCase() || '');
+      const canManageLeave = hasPermission(user?.role || '', 'MANAGE_LEAVE');
       const endpoint = canManageLeave ? '/api/leave/requests' : `/api/leave/requests?employeeId=${user?.employeeId}`;
       
       const promises = [
@@ -127,7 +128,7 @@ export default function LeavePage() {
 
   const getStatusLabel = (req: any) => {
     if (req.status !== 'pending') return req.status;
-    const levels: any = { 1: 'HOD', 2: 'Dean', 3: 'HR' };
+    const levels: any = { 1: 'Department Head', 2: 'Manager', 3: 'HR' };
     return `Pending (${levels[req.current_level || 1]} Approval)`;
   };
 
@@ -137,7 +138,7 @@ export default function LeavePage() {
     pending: <Clock className="w-4 h-4 text-amber-500" />,
   };
 
-    const canManageLeave = ['admin', 'super_admin', 'global_admin', 'hr', 'hr_manager', 'hr_executive', 'hod', 'principal', 'director', 'manager'].includes(user?.role?.toLowerCase() || '');
+    const canManageLeave = hasPermission(user?.role || '', 'MANAGE_LEAVE');
 
     return (
     <div className="space-y-6 animate-fade-in">
@@ -269,9 +270,9 @@ export default function LeavePage() {
                     </div>
                     <div className="flex flex-wrap gap-4 text-[10px] text-muted-foreground uppercase font-black tracking-widest leading-none">
                       <p className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> {new Date(req.start_date).toLocaleDateString()} - {new Date(req.end_date).toLocaleDateString()} ({Number(req.total_days)} Days)</p>
-                      {req.substitution_employee_id && <p className="text-primary font-black uppercase">Sub: {req.substitution_employee_id}</p>}
+                      {req.substitution_employee_id && <p className="text-primary font-black uppercase">Cover: {req.substitution_employee_id}</p>}
                       <p className={`px-2 py-0.5 rounded-md bg-muted border border-border ${req.current_level === 1 ? 'text-amber-600' : req.current_level === 2 ? 'text-indigo-600' : 'text-blue-600'}`}>
-                        Current: {req.current_level === 1 ? 'HOD' : req.current_level === 2 ? 'Dean' : 'HR'} Level
+                        Reviewing: {req.current_level === 1 ? 'Department Head' : req.current_level === 2 ? 'Manager' : 'HR'}
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground bg-muted p-3 rounded-xl border border-border italic">"{req.reason}"</p>
@@ -444,7 +445,7 @@ export default function LeavePage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Professional Reason</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Application Reason</label>
                 <textarea 
                   rows={2} required
                   value={formData.reason}
@@ -464,7 +465,7 @@ export default function LeavePage() {
                   type="submit" 
                   className="flex-1 py-3.5 bg-primary text-primary-foreground rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
                 >
-                  Register Application
+                  Submit Request
                 </button>
               </div>
             </form>

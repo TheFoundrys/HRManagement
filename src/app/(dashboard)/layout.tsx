@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
-          <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs animate-pulse">Initializing System...</p>
+          <p className="text-muted-foreground font-medium text-sm animate-pulse">Loading workspace...</p>
         </div>
       </div>
     );

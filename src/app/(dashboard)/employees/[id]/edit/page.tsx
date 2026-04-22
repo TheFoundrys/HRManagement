@@ -13,7 +13,9 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<any>(null);
-  const [tenantType, setTenantType] = useState<'EDUCATION' | 'COMPANY'>('EDUCATION');
+  const [departments, setDepartments] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [tenantType, setTenantType] = useState<'EDUCATION' | 'COMPANY'>('COMPANY');
 
   const ROLES = {
     COMPANY: [
@@ -53,8 +55,21 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
         if (meRes.ok) {
           const meData = await meRes.json();
           if (meData.success) {
-            setTenantType(meData.employee.tenantType || 'EDUCATION');
+            setTenantType(meData.employee.tenantType || 'COMPANY');
           }
+        }
+
+        // Fetch support data for selects
+        const deptRes = await fetch('/api/admin/scheduling/departments');
+        if (deptRes.ok) {
+          const deptData = await deptRes.json();
+          if (deptData.success) setDepartments(deptData.departments);
+        }
+
+        const empRes = await fetch('/api/employees');
+        if (empRes.ok) {
+          const empData = await empRes.json();
+          if (empData.success) setEmployees(empData.employees.filter((e: any) => e.university_id !== id));
         }
       } catch (err) {
         alert('Error fetching employee information');
@@ -139,7 +154,7 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Network Contact</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Contact Number</label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input 
@@ -159,15 +174,39 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
             </h3>
             <div className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Designation</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Job Title</label>
                 <input 
                   className="w-full p-3 bg-muted/50 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none transition-all text-sm font-bold"
                   value={formData.designation || ''}
                   onChange={(e) => setFormData({...formData, designation: e.target.value})}
                 />
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Department</label>
+                  <select 
+                    className="w-full p-3 bg-muted/50 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none transition-all text-sm font-bold cursor-pointer"
+                    value={formData.departmentId || formData.department_id || ''}
+                    onChange={(e) => setFormData({...formData, departmentId: e.target.value})}
+                  >
+                    <option value="">None</option>
+                    {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Reporting Manager</label>
+                  <select 
+                    className="w-full p-3 bg-muted/50 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none transition-all text-sm font-bold cursor-pointer"
+                    value={formData.managerId || formData.manager_id || ''}
+                    onChange={(e) => setFormData({...formData, managerId: e.target.value})}
+                  >
+                    <option value="">None</option>
+                    {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>)}
+                  </select>
+                </div>
+              </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Access Protocol (Role)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">System Role</label>
                 <select 
                   className="w-full p-3 bg-muted/50 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none transition-all text-sm font-bold cursor-pointer"
                   value={formData.role}
@@ -179,7 +218,7 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
                 </select>
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Fiscal Allocation (Basic)</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Basic Salary</label>
                 <div className="relative">
                   <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <input 
@@ -200,7 +239,7 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
             onClick={() => router.back()}
             className="px-8 py-3 bg-muted text-foreground border border-border rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-muted/80 transition-all"
           >
-            Abort
+            Cancel
           </button>
           <button 
             type="submit"
@@ -208,7 +247,7 @@ export default function EditEmployeePage({ params }: { params: Promise<{ id: str
             className="px-10 py-3 bg-primary text-primary-foreground rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 flex items-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save size={14} />}
-            Commit Changes
+            Save Changes
           </button>
         </div>
       </form>

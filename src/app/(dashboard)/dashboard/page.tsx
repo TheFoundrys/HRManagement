@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { Loader2 } from 'lucide-react';
+import { hasPermission } from '@/lib/auth/rbac';
 import AdminDashboard from './AdminDashboard';
 import StaffDashboard from './StaffDashboard';
 
@@ -30,11 +31,11 @@ export default function DashboardPage() {
   if (!data) return (
     <div className="flex flex-col items-center justify-center py-20 gap-4">
       <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      <p className="text-muted-foreground text-sm font-medium animate-pulse">Synchronizing Node Data...</p>
+      <p className="text-muted-foreground text-sm font-medium animate-pulse">Syncing data...</p>
     </div>
   );
 
-  const isAdmin = ['admin', 'super_admin'].includes(user?.role?.toLowerCase() || '');
+  const isAdmin = hasPermission(user?.role || '', 'VIEW_ALL_EMPLOYEES');
   const isNonTeaching = user?.role?.toLowerCase() === 'non_teaching';
 
   return (
@@ -45,7 +46,7 @@ export default function DashboardPage() {
             Welcome, <span className="text-primary">{user?.name?.split(' ')[0]}</span>
           </h1>
           <p className="text-muted-foreground mt-1 text-sm font-bold uppercase tracking-widest leading-none">
-            {isAdmin ? "Institutional Performance" : "Personal Work Cycle"}
+            {isAdmin ? "Organization Overview" : "My Workspace"}
           </p>
         </div>
         <div className="flex items-center gap-2 px-5 py-2 bg-card border border-border rounded-full text-[10px] font-black tracking-widest uppercase text-foreground shadow-soft">

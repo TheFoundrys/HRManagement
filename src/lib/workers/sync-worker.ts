@@ -3,7 +3,7 @@ import { ZKService } from '../biometric/zk-service';
 import { query } from '../db/postgres';
 
 /**
- * PRODUCTION SYNC WORKER: HEARTBEAT WINDOW (2 MINUTES)
+ * PRODUCTION SYNC WORKER: HEARTBEAT WINDOW (15 MINUTES)
  * Delegating all logic to the Service level for simplicity.
  */
 export function initSyncWorker() {
@@ -13,7 +13,7 @@ export function initSyncWorker() {
     return;
   }
 
-  cron.schedule('*/2 * * * *', async () => {
+  cron.schedule('*/15 * * * *', async () => {
     console.log(`🕒 [SYNC HEARTBEAT] Iterating through devices (${new Date().toLocaleTimeString()})...`);
     
     try {
@@ -41,5 +41,5 @@ export function initSyncWorker() {
     }
   });
 
-  console.log('🚀 SYSTEM ALERT: Biometric Sync Worker initialized (2m Window)');
+  console.log('🚀 SYSTEM ALERT: Biometric Sync Worker initialized (15m Window)');
 }

@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { hasPermission } from '@/lib/auth/rbac';
 import { autoLinkBiometric } from '@/lib/attendance/engine';
 import { sendOnboardingInvite } from '@/lib/mail/mailer';
+import { logAudit } from '@/lib/utils/audit';
 import crypto from 'crypto';
 
 export async function GET(request: Request) {
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     const scope = searchParams.get('scope'); // 'all' or 'team'
 
     // Check RBAC permission
-    if (!hasPermission(baseRole, 'VIEW_ALL_EMPLOYEES') && !hasPermission(baseRole, 'VIEW_TEAM')) {
+    if (!hasPermission(role, 'VIEW_ALL_EMPLOYEES') && !hasPermission(role, 'VIEW_TEAM')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -135,7 +136,7 @@ export async function POST(request: Request) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload || !['ADMIN', 'HR', 'SUPER_ADMIN'].includes(payload.role)) {
+    if (!payload || !hasPermission(payload.role, 'MANAGE_EMPLOYEES')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -262,7 +263,7 @@ export async function PUT(request: Request) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload || !['ADMIN', 'HR', 'SUPER_ADMIN'].includes(payload.role)) {
+    if (!payload || !hasPermission(payload.role, 'MANAGE_EMPLOYEES')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -304,6 +305,17 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     }
 
+    // 2. Log Audit
+    await logAudit({
+      tenantId,
+      userId: payload.userId,
+      action: 'UPDATE_EMPLOYEE',
+      entityType: 'EMPLOYEE',
+      entityId: university_id,
+      newValue: result.rows[0],
+      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1'
+    });
+
     return NextResponse.json({ success: true, employee: result.rows[0] });
   } catch (error) {
     console.error('Update employee error:', error);
@@ -318,11 +330,14 @@ export async function DELETE(request: Request) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload || payload.role !== 'ADMIN') {
+    if (!payload || !hasPermission(payload.role, 'MANAGE_EMPLOYEES')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'ID required' }, { status: 400 });
+    
     const { tenantId } = payload;
 
     // 1. Find employee info (need email for user deletion)
@@ -330,11 +345,24 @@ export async function DELETE(request: Request) {
     if (empRes.rows.length === 0) return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
     const emp = empRes.rows[0];
 
-    // 2. Delete linked user first (FK constraint)
-    await query('DELETE FROM users WHERE email = $1 AND tenant_id = $2', [emp.email, tenantId]);
+    // 2. Erase related records to resolve Foreign Key constraints
+    await query('DELETE FROM users WHERE (email = $1 OR employee_id = $2) AND tenant_id = $3', [emp.email, id, tenantId]);
+    await query('DELETE FROM attendance WHERE employee_id = $1 AND tenant_id = $2', [emp.id, tenantId]);
+    await query('DELETE FROM leave_requests WHERE employee_id = $1 AND tenant_id = $2', [emp.id, tenantId]);
 
-    // 3. Delete employee (Cascades to attendance, leaves, etc.)
+    // 3. Delete employee
     await query('DELETE FROM employees WHERE id = $1', [emp.id]);
+
+    // 4. Log Audit
+    await logAudit({
+      tenantId,
+      userId: payload.userId,
+      action: 'OFFBOARD_EMPLOYEE',
+      entityType: 'EMPLOYEE',
+      entityId: id,
+      oldValue: emp,
+      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1'
+    });
 
     return NextResponse.json({ success: true, message: 'Employee permanently off-boarded' });
   } catch (error) {
