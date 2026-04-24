@@ -27,9 +27,7 @@ export async function POST(request: Request) {
       [token, expires, user.id]
     );
 
-    /*
     await sendResetPasswordEmail(user.email, user.name, token);
-    */
 
     return NextResponse.json({ success: true, message: 'Reset link sent to your email.' });
   } catch (error) {

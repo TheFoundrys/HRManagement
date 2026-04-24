@@ -31,6 +31,8 @@ const getAppUrl = () => {
 export async function sendVerificationEmail(email: string, name: string, token: string) {
   const baseUrl = getAppUrl();
   const verifyUrl = `${baseUrl}/api/verify?token=${token}`;
+  
+  console.log(`📧 Sending verification email to: ${email} | BaseURL: ${baseUrl}`);
 
   const mailOptions = {
     from: `"The Foundrys HR" <${process.env.SMTP_USER}>`,
@@ -50,12 +52,21 @@ export async function sendVerificationEmail(email: string, name: string, token: 
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Verification email sent! MessageId: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`❌ Failed to send verification email to ${email}:`, error);
+    throw error;
+  }
 }
 
 export async function sendResetPasswordEmail(email: string, name: string, token: string) {
   const baseUrl = getAppUrl();
   const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+
+  console.log(`📧 Sending password reset email to: ${email} | BaseURL: ${baseUrl}`);
 
   const mailOptions = {
     from: `"The Foundrys HR" <${process.env.SMTP_USER}>`,
@@ -76,12 +87,21 @@ export async function sendResetPasswordEmail(email: string, name: string, token:
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Password reset email sent! MessageId: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`❌ Failed to send password reset email to ${email}:`, error);
+    throw error;
+  }
 }
 
 export async function sendOnboardingInvite(email: string, name: string, tempPassword: string, token: string) {
   const baseUrl = getAppUrl();
   const verifyUrl = `${baseUrl}/api/verify?token=${token}`;
+
+  console.log(`📧 Sending onboarding invite to: ${email} | BaseURL: ${baseUrl}`);
 
   const mailOptions = {
     from: `"The Foundrys HR" <${process.env.SMTP_USER}>`,
@@ -121,6 +141,13 @@ export async function sendOnboardingInvite(email: string, name: string, tempPass
     `,
   };
 
-  return transporter.sendMail(mailOptions);
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Onboarding email sent! MessageId: ${info.messageId}`);
+    return info;
+  } catch (error) {
+    console.error(`❌ Failed to send onboarding email to ${email}:`, error);
+    throw error;
+  }
 }
 

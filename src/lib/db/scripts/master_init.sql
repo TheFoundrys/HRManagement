@@ -68,8 +68,6 @@ CREATE TABLE users (
     is_active BOOLEAN DEFAULT true,
     is_verified BOOLEAN DEFAULT false,
     verification_token VARCHAR(255),
-    verification_token_expires TIMESTAMP,
-    last_login TIMESTAMP,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
     CONSTRAINT users_role_check CHECK (role IN (
