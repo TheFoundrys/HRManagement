@@ -134,17 +134,30 @@ export default function StaffDashboard({ data }: { data: any }) {
           </div>
           <div className="divide-y divide-border">
             {(data?.attendance || []).slice(0, 5).map((att: any, i: number) => (
-              <div key={i} className="p-4 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                <div>
+              <div key={i} className="p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between hover:bg-muted/50 transition-colors gap-3 sm:gap-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
                   <p className="text-xs font-bold text-foreground">{new Date(att.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
-                  <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{att.checkIn ? new Date(att.checkIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}</p>
+                  <div className="flex items-center gap-4 text-[10px] text-muted-foreground font-mono">
+                    <div className="flex flex-col">
+                      <span className="uppercase text-[8px] tracking-widest text-slate-400">In</span>
+                      <span>{att.checkIn ? new Date(att.checkIn).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' }) : '--:--'}</span>
+                    </div>
+                    {att.checkOut && (
+                      <div className="flex flex-col">
+                        <span className="uppercase text-[8px] tracking-widest text-slate-400">Out</span>
+                        <span>{new Date(att.checkOut).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
-                  att.status?.toLowerCase() === 'present' ? 'text-emerald-500 bg-emerald-500/10' : 
-                  att.status?.toLowerCase() === 'late' ? 'text-amber-500 bg-amber-500/10' : 'text-danger bg-danger/10'
-                }`}>
-                  {att.status}
-                </span>
+                <div className="flex items-center justify-between w-full sm:w-auto">
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${
+                    att.status?.toLowerCase() === 'present' ? 'text-emerald-500 bg-emerald-500/10' : 
+                    att.status?.toLowerCase() === 'late' ? 'text-amber-500 bg-amber-500/10' : 'text-danger bg-danger/10'
+                  }`}>
+                    {att.status}
+                  </span>
+                </div>
               </div>
             ))}
           </div>

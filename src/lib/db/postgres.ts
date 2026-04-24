@@ -11,6 +11,11 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
+// Enforce IST Timezone for all database connections
+pool.on('connect', (client) => {
+  client.query("SET timezone = 'Asia/Kolkata'");
+});
+
 pool.on('error', (err) => {
   console.error('❌ Unexpected PostgreSQL error on idle client', err);
 });

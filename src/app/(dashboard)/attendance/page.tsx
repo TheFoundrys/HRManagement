@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Clock, Filter, Loader2, Fingerprint } from 'lucide-react';
+import { Clock, Filter, Loader2, Fingerprint, Calendar, ArrowRight, User, Timer, LogIn, LogOut, Zap, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { hasPermission } from '@/lib/auth/rbac';
 
@@ -17,20 +17,15 @@ export default function AttendancePage() {
   const fetchRecords = async (isSilent = false) => {
     try {
       if (!isSilent) setLoading(true);
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1;
-      const currentYear = now.getFullYear();
-      
       const queryParams = new URLSearchParams();
       if (isAdmin) {
         queryParams.append('date', date);
       } else {
-        // Fetch current month for employee history
-        queryParams.append('month', currentMonth.toString());
-        queryParams.append('year', currentYear.toString());
+        const now = new Date();
+        queryParams.append('month', (now.getMonth() + 1).toString());
+        queryParams.append('year', now.getFullYear().toString());
         queryParams.append('employeeId', user?.employeeId || '');
       }
-      
       if (status) queryParams.append('status', status);
 
       const [attRes, setRes] = await Promise.all([
@@ -49,8 +44,6 @@ export default function AttendancePage() {
 
   useEffect(() => { 
     fetchRecords();
-    
-    // Auto-refresh every 5 seconds for live hours if viewing today
     const isToday = date === new Date().toISOString().split('T')[0];
     if (isToday) {
       const interval = setInterval(() => fetchRecords(true), 5000);
@@ -66,210 +59,174 @@ export default function AttendancePage() {
     if ((await res.json()).success) fetchRecords();
   };
 
-  const [processing, setProcessing] = useState(false);
+  const fmt = (t: string) => t ? new Date(t).toLocaleTimeString('en-IN', { 
+    hour: '2-digit', 
+    minute: '2-digit', 
+    hour12: true,
+    timeZone: 'Asia/Kolkata' 
+  }) : '—';
 
-  const processBiometric = async () => {
-    try {
-      setProcessing(true);
-      setMsg(null);
-      const res = await fetch('/api/attendance/process', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setMsg({ t: 'success', c: data.message || 'Biometric logs processed successfully.' });
-        fetchRecords(true);
-        setTimeout(() => setMsg(null), 5000);
-      } else {
-        setMsg({ t: 'error', c: data.error || 'Failed to process logs.' });
-      }
-    } catch (e) {
-      console.error(e);
-      setMsg({ t: 'error', c: 'Network error during biometric sync.' });
-    } finally {
-      setProcessing(false);
+  const getStatusStyle = (s: string) => {
+    switch (s?.toLowerCase()) {
+      case 'present': return 'bg-emerald-500/5 text-emerald-600 border-emerald-500/10';
+      case 'late': return 'bg-amber-500/5 text-amber-600 border-amber-500/10';
+      case 'absent': return 'bg-rose-500/5 text-rose-600 border-rose-500/10';
+      default: return 'bg-slate-500/5 text-slate-600 border-slate-500/10';
     }
   };
 
-  const fmt = (t: string) => t ? new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
-  const hasIn = records.some(r => r.checkIn);
-  const hasOut = records.some(r => r.checkOut);
-
   return (
-    <div className="max-w-auto space-y-6 animate-fade-in">
-      <header className="flex flex-wrap justify-between items-center gap-4 pb-6 border-b border-border">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><Clock className="text-primary" /> Attendance</h1>
-          <p className="text-muted-foreground text-sm mt-1">{records.length} records • {new Date(date).toDateString()}</p>
+    <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-700">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
+            <span className="p-3 bg-indigo-600 text-white rounded-[1.25rem] shadow-2xl shadow-indigo-200">
+              <Clock size={28} strokeWidth={2.5} />
+            </span>
+            Attendance
+          </h1>
+          <p className="text-slate-400 text-sm font-semibold flex items-center gap-2 pl-1">
+            <Calendar size={14} className="text-indigo-500" /> {new Date(date).toLocaleDateString('en-IN', { dateStyle: 'full' })}
+          </p>
         </div>
 
-        {isAdmin ? (
-          <div className="flex gap-3">
-            <a href="/attendance/terminal" className="px-5 py-2 bg-muted hover:bg-muted text-foreground border border-border rounded-xl text-sm font-bold transition-all shadow-soft">Scanner Terminal</a>
-            <button 
-              onClick={processBiometric} 
-              disabled={processing}
-              className="px-5 py-2 bg-primary text-primary-foreground font-bold rounded-xl text-sm shadow-soft shadow-primary/20 hover:bg-primary/90 transition-all disabled:opacity-50"
-            >
-              {processing ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="animate-spin" size={16} /> 
-                  Processing...
-                </div>
-              ) : 'Process Logs'}
-            </button>
-          </div>
-        ) : (
-          date === new Date().toISOString().split('T')[0] && (
-            mode === 'BIOMETRIC' ? (
-              <div className="px-5 py-2.5 bg-amber-500/10 text-amber-600 rounded-xl flex gap-2 text-sm font-bold border border-amber-500/20"><Fingerprint size={18} /> Biometric Restricted</div>
-            ) : (
-              <div className="flex gap-3">
-                <button onClick={() => clock()} disabled={hasIn || loading} className="px-6 py-2 bg-primary disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-xl text-sm font-bold transition-all shadow-soft shadow-primary/20">Clock In</button>
-                <button onClick={() => clock()} disabled={!hasIn || hasOut || loading} className="px-6 py-2 bg-muted border border-border disabled:text-muted-foreground text-foreground rounded-xl text-sm font-bold transition-all">Clock Out</button>
-              </div>
-            )
-          )
-        )}
+        <div className="flex w-full sm:w-auto gap-4">
+          {!isAdmin && date === new Date().toISOString().split('T')[0] && mode !== 'BIOMETRIC' && (
+            <div className="flex w-full gap-4">
+              <button onClick={clock} className="flex-1 px-8 py-4 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-95 transition-all">Clock In</button>
+              <button onClick={clock} className="flex-1 px-8 py-4 bg-white text-slate-900 border-2 border-slate-100 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 transition-all active:scale-95">Clock Out</button>
+            </div>
+          )}
+          {isAdmin && (
+             <a href="/attendance/terminal" className="px-6 py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:scale-[1.02] transition-all">Launch Kiosk</a>
+          )}
+        </div>
       </header>
-      
-      {msg && (
-        <div className={`p-4 rounded-2xl border animate-slide-down flex items-center justify-between gap-4 ${msg.t === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
-           <p className="text-[10px] font-black uppercase tracking-widest leading-none">{msg.c}</p>
-           <button onClick={() => setMsg(null)} className="text-[10px] uppercase font-black opacity-50 hover:opacity-100">Dismiss</button>
-        </div>
-      )}
 
-      <div className="flex flex-wrap gap-4 p-5 bg-card border border-border rounded-2xl items-center shadow-soft">
-        <Filter className="text-muted-foreground" size={18} />
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Select Date:</span>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-muted border border-border rounded-xl px-4 py-2 text-sm text-foreground focus:border-primary outline-none transition-all" />
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Filter {isAdmin ? 'Department' : 'History'}:</span>
-          <select value={status} onChange={e => setStatus(e.target.value)} className="bg-muted border border-border rounded-xl px-4 py-2 text-sm text-foreground capitalize focus:border-primary outline-none transition-all cursor-pointer">
-            <option value="">All Statuses</option>
-            {['Present', 'Absent', 'Late', 'Half-Day', 'On-Leave'].map(s => <option key={s.toLowerCase()} value={s.toLowerCase()}>{s}</option>)}
-          </select>
-        </div>
-      </div>
-
+      {/* Stats Board */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Present', id: 'PRESENT' },
-          { label: 'Absent', id: 'ABSENT' },
-          { label: 'Late', id: 'LATE' },
-          { label: 'Half-Day', id: 'HALF_DAY' },
-          { label: 'On-Leave', id: 'ON_LEAVE' }
-        ].map((s) => (
-          <div key={s.id} className="bg-card border border-border rounded-2xl p-5 text-center shadow-soft">
-            <p className="text-3xl font-black text-foreground">
-              {records.filter((r) => r.status?.toUpperCase() === s.id).length}
+          { label: 'Present', id: 'PRESENT', color: 'text-emerald-500' },
+          { label: 'Absent', id: 'ABSENT', color: 'text-rose-500' },
+          { label: 'Late', id: 'LATE', color: 'text-amber-500' },
+          { label: 'Half Day', id: 'HALF_DAY', color: 'text-sky-500' },
+          { label: 'On Leave', id: 'ON_LEAVE', color: 'text-indigo-500' }
+        ].map(s => (
+          <div key={s.id} className="bg-white border border-slate-100 rounded-[2rem] p-6 shadow-sm hover:shadow-md transition-all group border-b-4 border-b-transparent hover:border-b-indigo-500/20">
+            <p className={`text-4xl font-black ${s.color} tracking-tighter`}>
+              {records.filter(r => r.status?.toUpperCase() === s.id).length}
             </p>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">{s.label}</p>
+            <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em] mt-2">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {loading ? <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary w-8 h-8" /></div> : (
-        isAdmin ? (
-          <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-soft">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-foreground">
-                <thead className="bg-muted border-b border-border text-muted-foreground text-[10px] font-black uppercase tracking-widest">
-                  <tr>{['Employee ID', 'Terminal ID', 'Full Name', 'Check In', 'Check Out', 'Work Hours', 'Status', 'Method'].map(h => <th key={h} className="p-5">{h}</th>)}</tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {records.length ? records.map(r => (
-                    <tr key={r.id || r.employeeId} className="hover:bg-muted/30 transition-colors">
-                      <td className="p-5 font-mono text-primary text-xs font-bold">{r.employeeId}</td>
-                      <td className="p-5 font-mono text-muted-foreground text-xs">{r.deviceUserId}</td>
-                      <td className="p-5 font-bold">{r.firstName} {r.lastName}</td>
-                      <td className="p-5 font-bold">{fmt(r.checkIn)}</td>
-                      <td className="p-5 text-muted-foreground">{fmt(r.checkOut)}</td>
-                      <td className="p-5 text-muted-foreground"><span className="bg-muted px-2 py-1 rounded-md text-[10px] font-bold border border-border">{Number(r.workingHours || 0).toFixed(1)}h</span></td>
-                      <td className="p-5">
-                         <span className={`font-bold text-[10px] uppercase tracking-wider px-2.5 py-1.5 rounded-lg ${r.status === 'present' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-primary/10 text-primary'}`}>
-                           {r.status}
-                         </span>
-                      </td>
-                      <td className="p-5 text-muted-foreground text-[10px] font-bold uppercase tracking-widest">{r.source}</td>
-                    </tr>
-                  )) : <tr><td colSpan={8} className="p-12 text-center text-muted-foreground italic">No attendance records documented for this date.</td></tr>}
-                </tbody>
-              </table>
-            </div>
+      {/* Main Content Area */}
+      <div className="space-y-6">
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-4 p-5 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm items-center">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="p-2.5 bg-slate-50 rounded-xl text-slate-400"><Filter size={18} /></div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 hidden sm:block">Refine View</p>
           </div>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between px-2">
-               <h2 className="text-sm font-black uppercase tracking-widest text-muted-foreground">Work History Feed</h2>
-               <div className="h-[1px] flex-1 mx-6 bg-border" />
-               <p className="text-[10px] text-primary font-black uppercase tracking-widest">Monthly Summary</p>
-            </div>
-            <div className="bg-card border border-border rounded-[2.5rem] overflow-hidden shadow-soft">
-               <div className="divide-y divide-border">
-                  {records.length ? records.map(r => (
-                    <div key={r.id || r.employeeId} className="p-8 hover:bg-muted/30 transition-all group flex items-center justify-between gap-6">
-                       <div className="flex items-center gap-8 flex-1">
-                          {/* Date Block */}
-                          <div className="w-24 text-center">
-                             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest leading-none">{new Date(r.date).toLocaleDateString('en-US', { weekday: 'short' })}</p>
-                             <p className="text-2xl font-black text-foreground mt-1">{new Date(r.date).getDate()}</p>
-                             <p className="text-[10px] text-primary font-bold uppercase tracking-tight">{new Date(r.date).toLocaleDateString('en-US', { month: 'short' })}</p>
-                          </div>
-
-                          <div className="h-10 w-[1px] bg-border" />
-
-                          {/* Shift Info */}
-                          <div className="flex-1 grid grid-cols-2 lg:grid-cols-3 gap-8">
-                             <div>
-                                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mb-1.5">Check In</p>
-                                <p className="text-sm font-bold text-foreground">{fmt(r.checkIn)}</p>
-                             </div>
-                             <div>
-                                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mb-1.5">Check Out</p>
-                                <p className="text-sm font-bold text-foreground">{fmt(r.checkOut)}</p>
-                             </div>
-                             <div className="hidden lg:block">
-                                <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest mb-1.5">Duration</p>
-                                <p className="text-sm font-black text-primary uppercase">{Number(r.workingHours || 0).toFixed(1)} Hours</p>
-                             </div>
-                          </div>
-                       </div>
-
-                       {/* Status & Method */}
-                       <div className="flex items-center gap-6">
-                          <div className="text-right hidden sm:block">
-                             <p className="text-[9px] text-muted-foreground font-black uppercase tracking-widest leading-none">Method</p>
-                             <p className="text-[10px] font-bold text-foreground uppercase mt-1">{r.source}</p>
-                          </div>
-                          <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border min-w-[100px] text-center ${r.status === 'present' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
-                             {r.status}
-                          </span>
-                       </div>
-                    </div>
-                  )) : (
-                    <div className="py-20 text-center">
-                       <p className="text-muted-foreground font-black uppercase tracking-widest text-[10px]">No activity documented for this month</p>
-                    </div>
-                  )}
-               </div>
-            </div>
-            
-            <div className="bg-emerald-500/5 border border-emerald-500/10 p-8 rounded-[2rem] flex items-center gap-6">
-                <div className="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                   <Clock size={28} />
-                </div>
-                <div>
-                   <h4 className="text-sm font-black uppercase tracking-widest text-foreground">Attendance Records Verified</h4>
-                   <p className="text-xs text-muted-foreground font-medium mt-1">Your logs are automatically recorded and verified through the office biometric scanner.</p>
-                </div>
-            </div>
+          <div className="h-[1px] w-full sm:w-12 bg-slate-100 hidden sm:block" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+            {isAdmin && (
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-bold outline-none focus:ring-2 ring-indigo-500/10 transition-all" />
+            )}
+            <select value={status} onChange={e => setStatus(e.target.value)} className="bg-slate-50 border-none rounded-2xl px-5 py-3 text-sm font-bold outline-none cursor-pointer appearance-none">
+              <option value="">All Statuses</option>
+              {['Present', 'Absent', 'Late', 'Half-Day', 'On-Leave'].map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+            </select>
           </div>
-        )
-      )}
+        </div>
+
+        {/* History Feed */}
+        <div className="bg-white border border-slate-100 rounded-[3rem] shadow-sm overflow-hidden">
+          <div className="divide-y divide-slate-50">
+            {records.length ? records.map(r => (
+              <div key={r.id || r.employeeId} className="p-6 sm:p-10 hover:bg-slate-50/50 transition-all flex flex-col lg:flex-row items-center justify-between gap-8 group">
+                {/* Date & Identity */}
+                <div className="flex items-center gap-8 w-full lg:w-auto">
+                  <div className="w-16 sm:w-20 text-center flex flex-col items-center">
+                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">{new Date(r.date).toLocaleDateString('en-IN', { weekday: 'short' })}</span>
+                    <span className="text-3xl font-black text-slate-900 tracking-tighter">{new Date(r.date).getDate()}</span>
+                    <div className="h-1 w-4 bg-slate-100 rounded-full mt-2" />
+                  </div>
+                  
+                  <div className="h-12 w-[1px] bg-slate-100 hidden sm:block" />
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-black text-sm">
+                      {isAdmin ? (r.firstName?.[0] || 'U') : <User size={20} />}
+                    </div>
+                    <div>
+                      <p className="font-black text-slate-900 text-sm tracking-tight">{isAdmin ? `${r.firstName} ${r.lastName}` : 'Standard Shift'}</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{r.employeeId || 'System ID'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Time Flow (STAKED ON MOBILE TO PREVENT OVERLAP) */}
+                <div className="flex flex-1 flex-col sm:flex-row items-start sm:items-center justify-center gap-4 sm:gap-16 w-full lg:w-auto py-6 lg:py-0 border-y lg:border-0 border-slate-50">
+                  <div className="flex flex-row sm:flex-col items-center sm:items-start gap-4 sm:gap-0 w-full sm:w-auto">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest sm:mb-2 flex items-center gap-1 min-w-[70px] sm:min-w-0"><LogIn size={10} className="text-emerald-500" /> In</p>
+                    <p className="text-lg font-black text-slate-900 tracking-tight">{fmt(r.checkIn)}</p>
+                  </div>
+                  
+                  <div className="hidden sm:flex flex-col items-center opacity-20">
+                    <ArrowRight size={20} className="text-slate-900" />
+                  </div>
+
+                  <div className="flex flex-row sm:flex-col items-center sm:items-end gap-4 sm:gap-0 w-full sm:w-auto">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest sm:mb-2 flex items-center gap-1 min-w-[70px] sm:min-w-0 justify-start sm:justify-end"><LogOut size={10} className="text-rose-500" /> Out</p>
+                    <p className="text-lg font-black text-slate-900 tracking-tight">{fmt(r.checkOut)}</p>
+                  </div>
+                </div>
+
+                {/* Duration & Status */}
+                <div className="flex items-center justify-between lg:justify-end gap-6 w-full lg:w-auto">
+                   <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-2 bg-indigo-50 text-indigo-600 px-4 py-2 rounded-2xl border border-indigo-100/50">
+                        <Timer size={14} strokeWidth={3} />
+                        <span className="text-xs font-black tracking-tight">{Number(r.workingHours || 0).toFixed(1)} HRS</span>
+                      </div>
+                      {Number(r.workingHours || 0) > 9 && (
+                        <p className="text-[8px] font-black text-emerald-500 uppercase tracking-widest mt-1.5 flex items-center gap-1"><Zap size={8} fill="currentColor" /> Overtime Active</p>
+                      )}
+                   </div>
+                   
+                   <span className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.15em] border ${getStatusStyle(r.status)}`}>
+                     {r.status}
+                   </span>
+                </div>
+              </div>
+            )) : (
+              <div className="py-32 text-center space-y-4">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto text-slate-200">
+                  <Calendar size={32} />
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No activity documentation found for this period</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Info Card */}
+        <div className="bg-slate-900 p-8 rounded-[3rem] flex flex-col sm:flex-row items-center gap-8 overflow-hidden relative group">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[100px] rounded-full -mr-32 -mt-32" />
+           <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-white shrink-0 group-hover:scale-110 transition-transform duration-500">
+             <ShieldCheck size={32} className="text-indigo-400" />
+           </div>
+           <div className="text-center sm:text-left relative z-10">
+              <h4 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-2">Authenticated Infrastructure</h4>
+              <p className="text-slate-400 text-xs font-medium leading-relaxed max-w-xl">
+                Attendance metrics are cryptographically verified through hardware-level biometric nodes and spatial-temporal constraints. Any discrepancies are automatically flagged for institutional review.
+              </p>
+           </div>
+        </div>
+      </div>
     </div>
   );
 }

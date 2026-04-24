@@ -5,15 +5,26 @@ if (process.env.NODE_ENV !== 'production') {
   require('dotenv').config();
 }
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false, // true for 465, false for other ports
+const smtpConfig = {
+  host: process.env.SMTP_HOST || 'smtp.office365.com',
+  port: Number(process.env.SMTP_PORT || 587),
+  secure: false, // STARTTLS on port 587
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASSWORD,
   },
-});
+  tls: {
+    rejectUnauthorized: false,
+    minVersion: 'TLSv1.2' as const,
+  },
+  requireTLS: true,
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+};
+
+console.log(`📬 SMTP Config: host=${smtpConfig.host}, port=${smtpConfig.port}, user=${smtpConfig.auth.user}, passSet=${!!smtpConfig.auth.pass}`);
+
+const transporter = nodemailer.createTransport(smtpConfig);
 
 /**
  * Helper to get the base application URL
@@ -150,4 +161,3 @@ export async function sendOnboardingInvite(email: string, name: string, tempPass
     throw error;
   }
 }
-
