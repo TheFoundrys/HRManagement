@@ -2,13 +2,17 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import crypto from 'crypto';
 
+const getBaseUrl = () =>
+  (process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://hrms.thefoundrys.com').replace(/\/$/, '');
+
 export async function GET(request: Request) {
+  const base = getBaseUrl();
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
 
     if (!token) {
-       return NextResponse.redirect(new URL('/login?error=Invalid token', request.url));
+      return NextResponse.redirect(`${base}/login?error=Invalid+token`);
     }
 
     // Find and validate token
@@ -18,14 +22,14 @@ export async function GET(request: Request) {
     );
 
     if (result.rowCount === 0) {
-      return NextResponse.redirect(new URL('/login?error=Invalid or used token', request.url));
+      return NextResponse.redirect(`${base}/login?error=Invalid+or+used+token`);
     }
 
     const user = result.rows[0];
 
     // Check expiry
     if (new Date() > new Date(user.verification_token_expires)) {
-      return NextResponse.redirect(new URL('/login?error=Verification link expired. Please login again to resend.', request.url));
+      return NextResponse.redirect(`${base}/login?error=Verification+link+expired`);
     }
 
     // 1. Verify User and Generate a Reset Token for immediate password setup
@@ -43,11 +47,11 @@ export async function GET(request: Request) {
       [user.id, resetToken, resetExpires]
     );
 
-    // 2. Redirect to password setup (reset password page)
-    return NextResponse.redirect(new URL(`/reset-password?token=${resetToken}&onboarding=true`, request.url));
+    // 2. Always redirect to production domain — never use request.url as base
+    return NextResponse.redirect(`${base}/reset-password?token=${resetToken}&onboarding=true`);
 
   } catch (error) {
     console.error('Verification error:', error);
-    return NextResponse.redirect(new URL('/login?error=An internal error occurred', request.url));
+    return NextResponse.redirect(`${base}/login?error=An+internal+error+occurred`);
   }
 }
