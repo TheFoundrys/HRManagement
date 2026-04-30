@@ -51,15 +51,15 @@ export async function POST(request: Request) {
       [name, normalizedEmail, passwordHash, forcedRole, resolvedTenantId, verificationToken, verificationExpires]
     );
 
-    /*
     // Send verification email
     try {
       const { sendVerificationEmail } = await import('@/lib/mail/mailer');
-      await sendVerificationEmail(normalizedEmail, name, verificationToken);
+      const tenantRes = await query('SELECT name FROM tenants WHERE id = $1', [resolvedTenantId]);
+      const tenantName = tenantRes.rows[0]?.name || 'HR Portal';
+      await sendVerificationEmail(normalizedEmail, name, verificationToken, tenantName);
     } catch (mailError) {
       console.warn('Mail delivery delayed or failed:', mailError);
     }
-    */
 
     const user = result.rows[0];
 

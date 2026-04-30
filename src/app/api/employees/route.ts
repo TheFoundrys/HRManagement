@@ -230,7 +230,9 @@ export async function POST(request: Request) {
     );
 
     try {
-      await sendOnboardingInvite(email, name, tempPassword, verificationToken);
+      const tenantRes = await query('SELECT name FROM tenants WHERE id = $1', [tenantId]);
+      const tenantName = tenantRes.rows[0]?.name || 'HR Portal';
+      await sendOnboardingInvite(email, name, tempPassword, verificationToken, tenantName);
     } catch (mailError) {
       console.warn('Onboarding email delivery failed:', mailError);
     }

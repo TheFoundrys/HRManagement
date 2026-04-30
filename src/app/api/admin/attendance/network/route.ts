@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/jwt';
+import { hasPermission } from '@/lib/auth/rbac';
 
 /**
  * Get all Network Policies for current tenant
@@ -13,8 +14,8 @@ export async function GET() {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload || !['ADMIN', 'SUPER_ADMIN'].includes(payload.role || '')) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!payload || !hasPermission(payload.role, 'MANAGE_NETWORK_SECURITY')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { tenantId } = payload;
@@ -39,8 +40,8 @@ export async function POST(request: Request) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload || !['ADMIN', 'SUPER_ADMIN'].includes(payload.role || '')) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!payload || !hasPermission(payload.role, 'MANAGE_NETWORK_SECURITY')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { tenantId } = payload;

@@ -102,23 +102,23 @@ export default function StaffDashboard({ data }: { data: any }) {
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in duration-500 pb-10">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6  pb-10">
       
       {/* LEFT COLUMN - Utility & Gamification (4/12) */}
       <div className="lg:col-span-4 space-y-6">
         
         {/* Time & Clock In */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-border rounded-none p-6 ">
           <div className="flex justify-between items-center mb-4">
              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Attendance Clock</h3>
-             <div className="flex items-center gap-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-[9px] font-black uppercase tracking-tighter border border-primary/20">
+             <div className="flex items-center gap-2 px-2 py-0.5 bg-primary/10 text-primary rounded-none text-[9px] font-black uppercase tracking-tighter border border-primary/20">
                <Zap size={10} className="fill-current" /> {streak} Day Streak
              </div>
           </div>
           <div className="text-3xl font-black tracking-tighter text-foreground mb-6">
             {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
           </div>
-          <button className="w-full bg-primary text-secondary py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/10 hover:scale-[1.01] transition-all flex items-center justify-center gap-2 mb-3">
+          <button className="w-full bg-primary text-secondary py-3 rounded-none font-black text-[10px] uppercase tracking-widest  hover:scale-[1.01] transition-all flex items-center justify-center gap-2 mb-3">
             <MousePointer2 size={12} /> Web Clock-In
           </button>
           <p className="text-[9px] text-center font-bold text-muted-foreground uppercase tracking-widest">
@@ -127,7 +127,7 @@ export default function StaffDashboard({ data }: { data: any }) {
         </div>
 
         {/* Level Progression */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-border rounded-none p-6 ">
            <div className="flex justify-between items-end mb-4">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground leading-none mb-1">Current Status</p>
@@ -135,9 +135,9 @@ export default function StaffDashboard({ data }: { data: any }) {
               </div>
               <span className="text-[10px] font-black text-primary uppercase">{xpProgress}% to Level {level + 1}</span>
            </div>
-           <div className="h-2 bg-muted rounded-full overflow-hidden mb-3 border border-border">
+           <div className="h-2 bg-muted rounded-none overflow-hidden mb-3 border border-border">
               <div 
-                className="h-full bg-primary rounded-full transition-all duration-1000" 
+                className="h-full bg-primary rounded-none transition-all duration-1000" 
                 style={{ width: `${xpProgress}%` }} 
               />
            </div>
@@ -147,14 +147,14 @@ export default function StaffDashboard({ data }: { data: any }) {
         </div>
 
         {/* Achievements */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-border rounded-none p-6 ">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Unlocked Badges</h3>
           <div className="grid grid-cols-4 gap-2">
             {badges.map((badge) => (
               <div 
                 key={badge.id} 
                 title={badge.label}
-                className={`aspect-square rounded-lg flex items-center justify-center transition-all border
+                className={`aspect-square rounded-none flex items-center justify-center transition-all border
                   ${badge.active ? 'bg-primary/5 border-primary/20 text-primary' : 'bg-muted/30 border-transparent text-muted-foreground opacity-30 grayscale'}
                 `}
               >
@@ -165,7 +165,7 @@ export default function StaffDashboard({ data }: { data: any }) {
         </div>
 
         {/* Holiday Banner - Simplified */}
-        <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 relative overflow-hidden group">
+        <div className="bg-primary/5 border border-primary/20 rounded-none p-6 relative overflow-hidden group">
            <div className="relative z-10">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-primary mb-3">Next Holiday</h3>
               <h2 className="text-xl font-black text-foreground tracking-tight">{holidays[0]?.name || 'Stay Tuned'}</h2>
@@ -177,14 +177,14 @@ export default function StaffDashboard({ data }: { data: any }) {
         </div>
 
         {/* Leave Balances - Simplified */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-border rounded-none p-6 ">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Leave Balances</h3>
             <button className="text-[9px] font-black text-primary uppercase tracking-widest hover:underline">View All</button>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {leaveBalances.map((lb: any, i: number) => (
-              <div key={i} className="bg-muted/30 border border-border p-3 rounded-lg text-center">
+              <div key={i} className="bg-muted/30 border border-border p-3 rounded-none text-center">
                 <p className="text-sm font-black text-foreground leading-none">{lb.remaining}</p>
                 <p className="text-[7px] font-black text-muted-foreground uppercase mt-1 tracking-tighter truncate">{lb.name}</p>
               </div>
@@ -198,12 +198,12 @@ export default function StaffDashboard({ data }: { data: any }) {
       <div className="lg:col-span-8 space-y-6">
         
         {/* Off-Duty Today */}
-        <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+        <div className="bg-card border border-border rounded-none p-6 ">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-4">Off-Duty Today</h3>
             <div className="flex flex-wrap gap-2">
             {onLeaveToday.length > 0 ? onLeaveToday.map((emp: any, i: number) => (
-              <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/5 border border-rose-500/10 rounded-xl">
-                <div className="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center font-bold text-[8px] shrink-0">
+              <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/5 border border-rose-500/10 rounded-none">
+                <div className="w-6 h-6 rounded-none bg-rose-500 text-white flex items-center justify-center font-bold text-[8px] shrink-0">
                   {emp.avatar || emp.name?.[0]}
                 </div>
                 <span className="text-[10px] font-bold text-foreground uppercase tracking-tight whitespace-nowrap">{emp.name}</span>
@@ -215,7 +215,7 @@ export default function StaffDashboard({ data }: { data: any }) {
         </div>
 
         {/* Celebrations Tabs - Simplified */}
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-none overflow-hidden ">
            <div className="flex border-b border-border bg-muted/20 overflow-x-auto no-scrollbar">
               {['birthdays', 'anniversaries', 'joinees'].map((tab) => (
                 <button 
@@ -236,7 +236,7 @@ export default function StaffDashboard({ data }: { data: any }) {
                      <div className="space-y-4">
                         {birthdays.length > 0 ? birthdays.map((b: any, i: number) => (
                           <div key={i} className="flex items-center gap-3">
-                             <div className="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-600 flex items-center justify-center font-black text-sm border border-cyan-500/20 shrink-0">
+                             <div className="w-10 h-10 rounded-none bg-cyan-500/10 text-cyan-600 flex items-center justify-center font-black text-sm border border-cyan-500/20 shrink-0">
                                 {b.name?.[0]}
                              </div>
                              <div>
@@ -255,7 +255,7 @@ export default function StaffDashboard({ data }: { data: any }) {
                      <div className="space-y-4">
                         {upcomingBirthdays.length > 0 ? upcomingBirthdays.slice(0, 3).map((ub: any, i: number) => (
                           <div key={i} className="flex items-center gap-3">
-                             <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center font-black text-[10px] text-muted-foreground shrink-0">
+                             <div className="w-8 h-8 rounded-none bg-muted border border-border flex items-center justify-center font-black text-[10px] text-muted-foreground shrink-0">
                                {ub.name?.[0]}
                              </div>
                              <div>
@@ -275,24 +275,24 @@ export default function StaffDashboard({ data }: { data: any }) {
 
         {/* Praise / Social Feed - Simplified Cards */}
         {/* Quick Actions / Praise */}
-        <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex items-center justify-between">
+        <div className="bg-card border border-border rounded-none p-4  flex items-center justify-between">
            <div className="flex items-center gap-3">
-             <div className="p-2 bg-primary/10 text-primary rounded-lg"><MessageSquare size={16} /></div>
+             <div className="p-2 bg-primary/10 text-primary rounded-none"><MessageSquare size={16} /></div>
              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Recognize someone today?</p>
            </div>
            <button 
              onClick={() => setIsPraiseModalOpen(true)}
-             className="px-4 py-2 bg-primary text-secondary rounded-xl flex items-center gap-2 hover:bg-primary/90 transition-all shadow-sm font-black text-[10px] uppercase tracking-widest"
+             className="px-4 py-2 bg-primary text-secondary rounded-none flex items-center gap-2 hover:bg-primary/90 transition-all  font-black text-[10px] uppercase tracking-widest"
            >
              <Plus size={14} /> Add Praise
            </button>
         </div>
         <div className="space-y-4">
            {localPraises.map((p: any) => (
-             <div key={p.id} className="bg-card border border-border rounded-xl p-6 shadow-sm">
+             <div key={p.id} className="bg-card border border-border rounded-none p-6 ">
                 <div className="flex justify-between items-start mb-4">
                    <div className="flex gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-black text-xs border border-primary/20 italic">
+                      <div className="w-10 h-10 rounded-none bg-primary/10 text-primary flex items-center justify-center font-black text-xs border border-primary/20 italic">
                         {p.from ? p.from.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase() : '👤'}
                       </div>
                       <div>
@@ -302,12 +302,12 @@ export default function StaffDashboard({ data }: { data: any }) {
                          <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">{p.timestamp}</p>
                       </div>
                    </div>
-                   <button className="p-1.5 text-muted-foreground hover:bg-muted rounded-full transition-all">
+                   <button className="p-1.5 text-muted-foreground hover:bg-muted rounded-none transition-all">
                       <MoreHorizontal size={14} />
                    </button>
                 </div>
 
-                <div className="bg-muted/20 border border-border rounded-lg p-4 flex items-start gap-4 mb-4">
+                <div className="bg-muted/20 border border-border rounded-none p-4 flex items-start gap-4 mb-4">
                    <Award size={18} className="text-primary mt-0.5" />
                    <div>
                       <h4 className="text-xs font-black text-foreground uppercase tracking-tight leading-none">{p.title}</h4>
@@ -334,8 +334,8 @@ export default function StaffDashboard({ data }: { data: any }) {
                    </div>
                    <div className="flex items-center gap-2">
                       <div className="flex -space-x-1">
-                         <div className="w-4 h-4 rounded-full bg-rose-500 text-white border-2 border-background flex items-center justify-center"><Heart size={6} className="fill-current" /></div>
-                         <div className="w-4 h-4 rounded-full bg-blue-500 text-white border-2 border-background flex items-center justify-center"><ThumbsUp size={6} className="fill-current" /></div>
+                         <div className="w-4 h-4 rounded-none bg-rose-500 text-white border-2 border-background flex items-center justify-center"><Heart size={6} className="fill-current" /></div>
+                         <div className="w-4 h-4 rounded-none bg-blue-500 text-white border-2 border-background flex items-center justify-center"><ThumbsUp size={6} className="fill-current" /></div>
                       </div>
                       <span className="text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">{p.reactions} • {p.comments}</span>
                    </div>
@@ -349,10 +349,10 @@ export default function StaffDashboard({ data }: { data: any }) {
       {/* Praise Modal */}
       {isPraiseModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md shadow-2xl scale-100 animate-in zoom-in duration-200">
+          <div className="bg-card border border-border rounded-none w-full max-w-md  scale-100 animate-in zoom-in duration-200">
              <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20 rounded-t-2xl">
                 <div className="flex items-center gap-3">
-                   <div className="p-2 bg-primary/10 text-primary rounded-lg"><Award size={18} /></div>
+                   <div className="p-2 bg-primary/10 text-primary rounded-none"><Award size={18} /></div>
                    <h2 className="text-sm font-black uppercase tracking-widest text-foreground">Give Praise</h2>
                 </div>
                 <button onClick={() => setIsPraiseModalOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors"><Plus size={20} className="rotate-45" /></button>
@@ -362,7 +362,7 @@ export default function StaffDashboard({ data }: { data: any }) {
                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Who do you want to recognize?</label>
                    <select 
                      required
-                     className="w-full px-4 py-3 bg-muted/30 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none text-sm font-medium appearance-none"
+                     className="w-full px-4 py-3 bg-muted/30 border border-border rounded-none focus:ring-2 ring-primary/20 outline-none text-sm font-medium appearance-none"
                      value={praiseForm.toEmployeeId}
                      onChange={(e) => setPraiseForm({ ...praiseForm, toEmployeeId: e.target.value })}
                    >
@@ -378,7 +378,7 @@ export default function StaffDashboard({ data }: { data: any }) {
                      required
                      type="text" 
                      placeholder="e.g. Outstanding Support, Great Team Player"
-                     className="w-full px-4 py-3 bg-muted/30 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none text-sm font-medium"
+                     className="w-full px-4 py-3 bg-muted/30 border border-border rounded-none focus:ring-2 ring-primary/20 outline-none text-sm font-medium"
                      value={praiseForm.title}
                      onChange={(e) => setPraiseForm({ ...praiseForm, title: e.target.value })}
                    />
@@ -389,7 +389,7 @@ export default function StaffDashboard({ data }: { data: any }) {
                      required
                      rows={4}
                      placeholder="Tell them why they're awesome..."
-                     className="w-full px-4 py-3 bg-muted/30 border border-border rounded-xl focus:ring-2 ring-primary/20 outline-none text-sm font-medium resize-none"
+                     className="w-full px-4 py-3 bg-muted/30 border border-border rounded-none focus:ring-2 ring-primary/20 outline-none text-sm font-medium resize-none"
                      value={praiseForm.message}
                      onChange={(e) => setPraiseForm({ ...praiseForm, message: e.target.value })}
                    />
@@ -397,7 +397,7 @@ export default function StaffDashboard({ data }: { data: any }) {
                 <button 
                   disabled={submitting}
                   type="submit"
-                  className="w-full bg-primary text-secondary py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
+                  className="w-full bg-primary text-secondary py-4 rounded-none font-black text-[10px] uppercase tracking-[0.2em]  hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2"
                 >
                   {submitting ? 'Posting...' : 'Share Praise'} <PartyPopper size={14} />
                 </button>

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/stores/authStore';
-import { Users, UserPlus, Search, Edit2, Trash2, Building2, Briefcase, Mail, Filter, Download, ChevronRight, X, Loader2, User } from 'lucide-react';
+import { Users, UserPlus, Search, Trash2, Building2, Briefcase, Mail, Filter, Download, ChevronRight, Loader2, User } from 'lucide-react';
 import Link from 'next/link';
 
 export default function EmployeesPage() {
@@ -11,12 +11,6 @@ export default function EmployeesPage() {
   const [designations, setDesignations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [form, setForm] = useState({ 
-    employeeId: '', name: '', email: '', role: '', 
-    departmentId: '', designationId: '', reportsToId: '', 
-    salary: { basic: 0, hra: 0, allowances: 0, deductions: 0 } 
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = async () => {
@@ -44,29 +38,6 @@ export default function EmployeesPage() {
     fetchData();
   }, []);
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      const res = await fetch('/api/employees', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowAddModal(false);
-        fetchData();
-        setForm({ employeeId: '', name: '', email: '', role: '', departmentId: '', designationId: '', reportsToId: '', salary: { basic: 0, hra: 0, allowances: 0, deductions: 0 } });
-      } else {
-        alert(data.error || 'Failed to add employee');
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const filteredEmployees = employees.filter(e => {
     const s = search.toLowerCase();
@@ -98,12 +69,12 @@ export default function EmployeesPage() {
             Manage your workforce and access profiles
           </p>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+        <Link 
+          href="/hire"
+          className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3.5 rounded-none font-black text-[10px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
         >
-          <UserPlus size={16} strokeWidth={3} /> Add Employee
-        </button>
+          <UserPlus size={16} strokeWidth={3} /> Hire Talent
+        </Link>
       </header>
 
       {/* Mini Stats */}
@@ -114,11 +85,11 @@ export default function EmployeesPage() {
           { label: isCompany ? 'Designations' : 'Departments', value: isCompany ? designations.length : stats.departments, icon: Building2, color: 'text-amber-500' },
           { label: 'Unique Roles', value: stats.roles, icon: Briefcase, color: 'text-indigo-500' }
         ].map((s, i) => (
-          <div key={i} className="bg-card border border-border p-5 rounded-2xl shadow-sm hover:border-primary/20 transition-all group">
+          <div key={i} className="bg-card border border-border p-5 rounded-none shadow-sm hover:border-primary/20 transition-all group">
             <p className="text-[9px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-3">{s.label}</p>
             <div className="flex items-end justify-between">
               <p className="text-3xl font-black text-foreground">{s.value}</p>
-              <div className={`w-10 h-10 rounded-xl bg-muted flex items-center justify-center group-hover:bg-primary/5 transition-colors ${s.color}`}>
+              <div className={`w-10 h-10 rounded-none bg-muted flex items-center justify-center group-hover:bg-primary/5 transition-colors ${s.color}`}>
                 <s.icon size={20} />
               </div>
             </div>
@@ -127,9 +98,9 @@ export default function EmployeesPage() {
       </div>
 
       {/* Directory Table */}
-      <div className="bg-card border border-border rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-card border border-border rounded-none shadow-sm overflow-hidden flex flex-col">
         <div className="p-5 border-b border-border bg-muted/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-           <div className="flex items-center gap-3 bg-card border border-border px-4 py-2.5 rounded-xl flex-1 max-w-md shadow-sm focus-within:border-primary transition-all">
+           <div className="flex items-center gap-3 bg-card border border-border px-4 py-2.5 rounded-none flex-1 max-w-md shadow-sm focus-within:border-primary transition-all">
               <Search size={16} className="text-muted-foreground" />
               <input 
                 type="text" 
@@ -140,10 +111,10 @@ export default function EmployeesPage() {
               />
            </div>
            <div className="flex items-center gap-2">
-              <button className="p-3 bg-card border border-border text-muted-foreground rounded-xl hover:text-foreground hover:border-primary transition-all shadow-sm">
+              <button className="p-3 bg-card border border-border text-muted-foreground rounded-none hover:text-foreground hover:border-primary transition-all shadow-sm">
                  <Filter size={18} />
               </button>
-              <button className="p-3 bg-card border border-border text-muted-foreground rounded-xl hover:text-foreground hover:border-primary transition-all shadow-sm">
+              <button className="p-3 bg-card border border-border text-muted-foreground rounded-none hover:text-foreground hover:border-primary transition-all shadow-sm">
                  <Download size={18} />
               </button>
            </div>
@@ -167,7 +138,7 @@ export default function EmployeesPage() {
                 <tr key={emp.id} className="hover:bg-muted/30 transition-all group cursor-pointer">
                   <td className="px-6 py-5">
                     <div className="flex items-center gap-4">
-                       <div className="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center font-black text-primary text-sm group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
+                       <div className="w-12 h-12 rounded-none bg-muted flex items-center justify-center font-black text-primary text-sm group-hover:bg-primary group-hover:text-white transition-all shadow-sm">
                           {emp.name?.[0] || '?'}
                        </div>
                        <div>
@@ -191,7 +162,7 @@ export default function EmployeesPage() {
                     </div>
                   </td>
                   <td className="px-6 py-5">
-                    <span className={`px-4 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest border transition-all ${
+                    <span className={`px-4 py-1.5 rounded-none text-[9px] font-black uppercase tracking-widest border transition-all ${
                       emp.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-rose-500/10 text-rose-500 border-rose-500/20'
                     }`}>
                       {emp.status}
@@ -210,11 +181,11 @@ export default function EmployeesPage() {
                             });
                         }
                       }}
-                      className="p-3.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/5 rounded-2xl transition-all inline-block shadow-sm"
+                      className="p-3.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/5 rounded-none transition-all inline-block shadow-sm"
                     >
                        <Trash2 size={18} />
                     </button>
-                    <Link href={`/employees/${emp.id}`} className="p-3.5 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-2xl transition-all inline-block shadow-sm">
+                    <Link href={`/employees/${emp.id}`} className="p-3.5 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-none transition-all inline-block shadow-sm">
                        <ChevronRight size={18} />
                     </Link>
                   </td>
@@ -225,70 +196,6 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-      {/* Add Employee Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-card border border-border rounded-[2.5rem] p-8 w-full max-w-2xl shadow-2xl space-y-8 animate-in slide-in-from-bottom-8 duration-500 max-h-[90vh] overflow-y-auto no-scrollbar">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                 <h2 className="text-2xl font-black text-foreground uppercase tracking-tight">Onboard New Talent</h2>
-                 <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Provide essential employee details below</p>
-              </div>
-              <button onClick={() => setShowAddModal(false)} className="p-3 hover:bg-muted rounded-2xl transition-all"><X size={20} /></button>
-            </div>
-
-            <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Identity Name</label>
-                  <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full px-5 py-3.5 bg-muted border border-border rounded-2xl text-sm font-bold outline-none focus:border-primary transition-all text-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Terminal Address (Email)</label>
-                  <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} className="w-full px-5 py-3.5 bg-muted border border-border rounded-2xl text-sm font-bold outline-none focus:border-primary transition-all text-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Corporate Role</label>
-                  <select required value={form.role} onChange={e => setForm({ ...form, role: e.target.value })} className="w-full px-5 py-3.5 bg-muted border border-border rounded-2xl text-sm font-bold outline-none focus:border-primary transition-all text-foreground">
-                    <option value="" className="bg-card">Select Role</option>
-                    {['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE', 'FACULTY', 'STAFF'].map(r => <option key={r} value={r} className="bg-card">{r}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Employee Serial ID</label>
-                  <input required value={form.employeeId} onChange={e => setForm({ ...form, employeeId: e.target.value })} className="w-full px-5 py-3.5 bg-muted border border-border rounded-2xl text-sm font-black outline-none focus:border-primary transition-all text-foreground placeholder:opacity-30" placeholder="e.g. TO-0001" />
-                </div>
-                {!isCompany && (
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Department</label>
-                    <select value={form.departmentId} onChange={e => setForm({ ...form, departmentId: e.target.value })} className="w-full px-5 py-3.5 bg-muted border border-border rounded-2xl text-sm font-bold outline-none focus:border-primary transition-all text-foreground">
-                      <option value="" className="bg-card">Select Department</option>
-                      {departments.map(d => <option key={d.id} value={d.id} className="bg-card">{d.name}</option>)}
-                    </select>
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Designation</label>
-                  <select required value={form.designationId} onChange={e => setForm({ ...form, designationId: e.target.value })} className="w-full px-5 py-3.5 bg-muted border border-border rounded-2xl text-sm font-bold outline-none focus:border-primary transition-all text-foreground">
-                    <option value="" className="bg-card">Select Designation</option>
-                    {designations.map(d => <option key={d.id} value={d.id} className="bg-card">{d.name}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="md:col-span-2 pt-6 flex gap-4">
-                 <button type="button" onClick={() => setShowAddModal(false)} className="flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground hover:bg-muted rounded-2xl transition-all">Cancel</button>
-                 <button type="submit" disabled={isSubmitting} className="flex-1 py-4 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/10 hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
-                   {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : 'Onboard Employee'}
-                 </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

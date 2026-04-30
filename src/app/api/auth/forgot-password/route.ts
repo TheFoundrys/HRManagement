@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
 
     const result = await query(
-      'SELECT id, name, email FROM users WHERE email = $1 LIMIT 1',
+      'SELECT id, name, email, tenant_id FROM users WHERE email = $1 LIMIT 1',
       [email.toLowerCase()]
     );
 
@@ -27,7 +27,9 @@ export async function POST(request: Request) {
       [token, expires, user.id]
     );
 
-    await sendResetPasswordEmail(user.email, user.name, token);
+    const tenantRes = await query('SELECT name FROM tenants WHERE id = $1', [user.tenant_id]);
+    const tenantName = tenantRes.rows[0]?.name || 'HR Portal';
+    await sendResetPasswordEmail(user.email, user.name, token, tenantName);
 
     return NextResponse.json({ success: true, message: 'Reset link sent to your email.' });
   } catch (error) {

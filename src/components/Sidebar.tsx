@@ -21,6 +21,7 @@ import {
   CreditCard,
   FileSpreadsheet,
   User,
+  UserPlus,
   ShieldAlert,
   Building2,
   LucideIcon
@@ -54,6 +55,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Attendance', href: '/attendance', icon: UserCheck, hideForSuperAdmin: true },
   { label: 'Leave', href: '/leave', icon: CalendarDays, hideForSuperAdmin: true },
   { label: 'Employees', href: '/employees', icon: Users, permission: 'MANAGE_EMPLOYEES', hideForSuperAdmin: true },
+  { label: 'Hire', href: '/hire', icon: UserPlus, permission: 'MANAGE_EMPLOYEES', hideForSuperAdmin: true },
   { label: 'Departments', href: '/admin/departments', icon: Building, permission: 'MANAGE_SYSTEM', hideForCompany: true, hideForSuperAdmin: true },
   { label: 'Holidays', href: '/admin/holidays', icon: CalendarDays, permission: 'MANAGE_SYSTEM', hideForSuperAdmin: true },
   { label: 'Biometric', href: '/biometric', icon: FileBadge, permission: 'MANAGE_BIOMETRICS', hideForSuperAdmin: true },
@@ -92,12 +94,12 @@ export function Sidebar() {
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-card border-b border-border z-50 flex items-center px-4">
         <button
           onClick={() => setIsMobileOpen(!isMobileOpen)}
-          className="p-2 bg-muted border border-border rounded-lg shadow-sm"
+          className="p-2 bg-muted border border-border rounded-none"
         >
           <Menu className="w-5 h-5 text-foreground" />
         </button>
         <div className="ml-4 flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-primary/10 rounded-none flex items-center justify-center">
             <GraduationCap className="w-4 h-4 text-primary" />
           </div>
           <span className="font-bold text-xs uppercase tracking-tight">{user?.tenantName || 'HR Portal'}</span>
@@ -119,7 +121,7 @@ export function Sidebar() {
         `}
       >
         <div className="flex items-center gap-3 px-5 py-6 border-b border-border h-16 lg:h-auto">
-          <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 bg-primary/10 rounded-none flex items-center justify-center shrink-0">
             {isSuperAdmin ? <ShieldAlert className="w-5 h-5 text-primary" /> : <GraduationCap className="w-5 h-5 text-primary" />}
           </div>
           {(!collapsed || isMobileOpen) && (
@@ -148,9 +150,9 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-3 lg:py-2 rounded-xl transition-all duration-150 group
+                className={`flex items-center gap-3 px-3 py-3 lg:py-2 rounded-none transition-all duration-150 group
                   ${isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'}
                 `}
               >
@@ -173,7 +175,7 @@ export function Sidebar() {
             <ThemeToggle collapsed={collapsed && !isMobileOpen} />
             <button
               onClick={logout}
-              className="w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
+              className="w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-none text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-all"
             >
               <LogOut className="w-5 h-5 lg:w-4 lg:h-4 shrink-0" />
               {(!collapsed || isMobileOpen) && <span className="text-[11px] font-bold uppercase">Logout</span>}

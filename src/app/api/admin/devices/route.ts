@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { query } from '@/lib/db/postgres';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/jwt';
+import { hasPermission } from '@/lib/auth/rbac';
 
 /**
  * Manage Biometric Devices for a Tenant
@@ -13,7 +14,9 @@ export async function GET() {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    if (!payload || !hasPermission(payload.role, 'MANAGE_BIOMETRICS')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const result = await query(
       'SELECT * FROM tenant_devices WHERE tenant_id = $1 ORDER BY created_at DESC',
@@ -34,8 +37,8 @@ export async function POST(request: Request) {
     if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const payload = await verifyToken(token);
-    if (!payload || !['ADMIN', 'SUPER_ADMIN'].includes(payload.role || '')) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (!payload || !hasPermission(payload.role, 'MANAGE_BIOMETRICS')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { device_id, device_name, device_ip, device_type, location } = await request.json();
@@ -75,8 +78,8 @@ export async function DELETE(request: Request) {
       if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   
       const payload = await verifyToken(token);
-      if (!payload || !['ADMIN', 'SUPER_ADMIN'].includes(payload.role || '')) {
-        return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      if (!payload || !hasPermission(payload.role, 'MANAGE_BIOMETRICS')) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
   
       await query('DELETE FROM tenant_devices WHERE id = $1 AND tenant_id = $2', [id, payload.tenantId]);
