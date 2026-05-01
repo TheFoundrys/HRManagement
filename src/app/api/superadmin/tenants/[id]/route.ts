@@ -53,11 +53,11 @@ export async function PATCH(
         }
     
         const { id } = await params;
-        const { name, subdomain, tenantType } = await request.json();
+        const { name, org_type, domain, org_size } = await request.json();
     
         const result = await query(
-          'UPDATE tenants SET name = COALESCE($1, name), subdomain = COALESCE($2, subdomain), tenant_type = COALESCE($3, tenant_type), updated_at = NOW() WHERE id = $4 RETURNING *',
-          [name, subdomain?.toLowerCase(), tenantType, id]
+          'UPDATE tenants SET name = COALESCE($1, name), org_type = COALESCE($2, org_type), domain = COALESCE($3, domain), org_size = COALESCE($4, org_size), updated_at = NOW() WHERE id = $5 RETURNING *',
+          [name, org_type, domain, org_size, id]
         );
     
         if ((result.rowCount || 0) === 0) {

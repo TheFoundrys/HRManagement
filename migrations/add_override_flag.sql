@@ -1,0 +1,1 @@
+ALTER TABLE leave_balances ADD COLUMN IF NOT EXISTS manual_override BOOLEAN DEFAULT FALSE;

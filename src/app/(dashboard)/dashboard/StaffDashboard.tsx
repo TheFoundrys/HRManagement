@@ -8,6 +8,7 @@ import {
   Plus, Award, Heart, Zap, Star, Trophy, Medal,
   Activity, TrendingUp, UserCheck, CalendarOff, AlertCircle
 } from 'lucide-react';
+import { RemoteClockIn } from '@/components/RemoteClockIn';
 
 export default function StaffDashboard({ data }: { data: any }) {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -120,10 +121,8 @@ export default function StaffDashboard({ data }: { data: any }) {
           <div className="text-3xl font-black tracking-tighter text-foreground mb-6">
             {currentTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
           </div>
-          <button className="w-full bg-primary text-secondary py-3 rounded-none font-black text-[10px] uppercase tracking-widest  hover:scale-[1.01] transition-all flex items-center justify-center gap-2 mb-3">
-            <MousePointer2 size={12} /> Web Clock-In
-          </button>
-          <p className="text-[9px] text-center font-bold text-muted-foreground uppercase tracking-widest">
+          <RemoteClockIn />
+          <p className="text-[9px] text-center font-bold text-muted-foreground uppercase tracking-widest mt-4">
             {currentTime.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
@@ -192,6 +191,55 @@ export default function StaffDashboard({ data }: { data: any }) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Performance Summary */}
+        <div className="bg-card border border-border rounded-none p-6 ">
+           <div className="flex justify-between items-center mb-6">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Performance Review</h3>
+              <div className="px-2 py-0.5 bg-amber-500/10 text-amber-600 text-[9px] font-black uppercase border border-amber-500/20">
+                 Cycle: Q2 2026
+              </div>
+           </div>
+           
+           <div className="space-y-6">
+              <div className="flex items-center gap-6">
+                 <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-none flex flex-col items-center justify-center">
+                    <span className="text-2xl font-black text-primary">{data?.performance?.rating || '—'}</span>
+                    <span className="text-[7px] font-black uppercase text-muted-foreground">Rating</span>
+                 </div>
+                 <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                       <h4 className="text-xs font-black text-foreground uppercase tracking-tight">Current Standing</h4>
+                       <span className="text-[10px] font-black text-primary">{(Number(data?.performance?.rating || 0) / 5 * 100).toFixed(0)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-muted border border-border rounded-none overflow-hidden">
+                       <div 
+                         className="h-full bg-primary transition-all duration-1000" 
+                         style={{ width: `${(Number(data?.performance?.rating || 0) / 5) * 100}%` }} 
+                       />
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-2 font-medium italic">
+                       {data?.performance?.feedback ? `"${data.performance.feedback.substring(0, 60)}..."` : 'No reviews recorded for this cycle yet.'}
+                    </p>
+                 </div>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t border-border border-dashed">
+                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Active Goals</p>
+                 {(data?.goals || []).length > 0 ? (data.goals || []).map((goal: any, i: number) => (
+                   <div key={i} className="flex items-center justify-between p-2.5 bg-muted/30 border border-border">
+                      <div className="flex items-center gap-2">
+                         <div className="w-1.5 h-1.5 bg-primary" />
+                         <span className="text-[10px] font-bold text-foreground uppercase tracking-tight">{goal.title}</span>
+                      </div>
+                      <span className="text-[8px] font-black text-muted-foreground uppercase">{goal.progress || 0}%</span>
+                   </div>
+                 )) : (
+                   <div className="py-2 text-[9px] text-muted-foreground font-bold uppercase opacity-50 italic">No active goals assigned</div>
+                 )}
+              </div>
+           </div>
         </div>
 
       </div>

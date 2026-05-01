@@ -24,6 +24,8 @@ import {
   UserPlus,
   ShieldAlert,
   Building2,
+  Layers,
+  Award,
   LucideIcon
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/stores/authStore';
@@ -39,6 +41,7 @@ interface NavItem {
   hideForEmployee?: boolean;
   superAdminOnly?: boolean;
   hideForSuperAdmin?: boolean;
+  module?: string;
   activePaths?: string[];
 }
 
@@ -51,16 +54,19 @@ const FINANCE_ITEMS: NavItem[] = [
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Tenants', href: '/superadmin/tenants', icon: Building2, superAdminOnly: true },
+  { label: 'Blueprints', href: '/superadmin/templates', icon: Layers, superAdminOnly: true },
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Inbox', href: '/inbox', icon: Mail, hideForEmployee: true },
-  { label: 'Attendance', href: '/attendance', icon: UserCheck, hideForSuperAdmin: true },
-  { label: 'Leave', href: '/leave', icon: CalendarDays, hideForSuperAdmin: true },
+  { label: 'Attendance', href: '/attendance', icon: UserCheck, hideForSuperAdmin: true, module: 'attendance' },
+  { label: 'Leave', href: '/leave', icon: CalendarDays, hideForSuperAdmin: true, module: 'leave' },
+  { label: 'Manage Leaves', href: '/leave?tab=manage', icon: ShieldAlert, permission: 'MANAGE_LEAVE', hideForSuperAdmin: true, module: 'leave' },
   { label: 'Employees', href: '/employees', icon: Users, permission: 'MANAGE_EMPLOYEES', hideForSuperAdmin: true },
-  { label: 'Hire', href: '/hire', icon: UserPlus, permission: 'MANAGE_EMPLOYEES', hideForSuperAdmin: true },
+  { label: 'Hire', href: '/hire', icon: UserPlus, permission: 'MANAGE_EMPLOYEES', hideForSuperAdmin: true, module: 'recruitment' },
+  { label: 'Performance', href: '/performance', icon: Award, hideForSuperAdmin: true, module: 'performance' },
+  { label: 'Documents', href: '/documents', icon: FileText, hideForSuperAdmin: true, module: 'documents' },
   { label: 'Departments', href: '/admin/departments', icon: Building, permission: 'MANAGE_SYSTEM', hideForCompany: true, hideForSuperAdmin: true },
   { label: 'Holidays', href: '/admin/holidays', icon: CalendarDays, permission: 'MANAGE_SYSTEM', hideForSuperAdmin: true },
   { label: 'Biometric', href: '/biometric', icon: FileBadge, permission: 'MANAGE_BIOMETRICS', hideForSuperAdmin: true },
-  { label: 'Finances', href: '/salary-structure', icon: CreditCard, permission: 'MANAGE_PAYROLL', activePaths: ['/salary-structure', '/payroll', '/payslips', '/reports'] },
+  { label: 'Finances', href: '/salary-structure', icon: CreditCard, permission: 'MANAGE_PAYROLL', activePaths: ['/salary-structure', '/payroll', '/payslips', '/reports'], module: 'payroll' },
   { label: 'Profile', href: '/profile', icon: User },
 ];
 
@@ -86,6 +92,12 @@ export function Sidebar() {
     if (item.hideForEmployee && user?.role === 'EMPLOYEE') return false;
     if (item.permission && !hasPermission(user?.role || '', item.permission)) return false;
     if (item.hideForCompany && user?.tenantType === 'COMPANY') return false;
+    
+    // Module check: Hide if module is explicitly disabled in tenant settings
+    if (item.module && user?.tenantSettings?.modules) {
+      if (user.tenantSettings.modules[item.module] === false) return false;
+    }
+
     return true;
   });
 

@@ -132,7 +132,9 @@ export default function HirePage() {
                   className="w-full px-6 py-4 bg-muted/50 border border-border rounded-none text-sm font-bold outline-none focus:border-primary focus:bg-card transition-all text-foreground appearance-none"
                 >
                   <option value="" className="bg-card">Select Role</option>
-                  {['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE', 'FACULTY', 'STAFF'].map(r => <option key={r} value={r} className="bg-card">{r}</option>)}
+                  {(user?.tenantSettings?.roles || ['ADMIN', 'HR', 'MANAGER', 'EMPLOYEE']).map((r: string) => (
+                    <option key={r} value={r} className="bg-card">{r}</option>
+                  ))}
                 </select>
               </div>
             </div>

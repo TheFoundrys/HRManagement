@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuthStore } from '@/lib/stores/authStore';
 import { 
   Calendar, 
@@ -42,11 +43,19 @@ interface LeaveRequest {
   attachment_url?: string;
 }
 
-type TabType = 'summary' | 'logs';
+type TabType = 'summary' | 'logs' | 'manage';
 
 export default function LeavePage() {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<TabType>('summary');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>((searchParams.get('tab') as TabType) || 'summary');
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') as TabType;
+    if (tab && ['summary', 'logs', 'manage'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
   const [balances, setBalances] = useState<LeaveBalance[]>([]);
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,6 +73,11 @@ export default function LeavePage() {
     attachmentUrl: ''
   });
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [adminBalances, setAdminBalances] = useState<any[]>([]);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const isHRAdmin = ['ADMIN', 'HR', 'HR_MANAGER', 'SUPER_ADMIN'].includes(user?.role || '');
   const canManageLeave = hasPermission(user?.role || '', 'MANAGE_LEAVE');
 
   const fetchData = async () => {
@@ -82,10 +96,14 @@ export default function LeavePage() {
 
       const results = await Promise.all(promises);
       const data = await Promise.all(results.map(r => r.json()));
+      console.log('[LeavePage] Data received:', data);
       
       if (data[0].success) setRequests(data[0].requests);
       if (data[1].success) setLeaveTypes(data[1].types);
-      if (data[2]?.success) setBalances(data[2].balances);
+      if (data[2]?.success) {
+        console.log('[LeavePage] Setting balances:', data[2].balances);
+        setBalances(data[2].balances);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -237,6 +255,15 @@ export default function LeavePage() {
           Leave Logs
           {activeTab === 'logs' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
         </button>
+        {isHRAdmin && (
+          <button 
+            onClick={() => setActiveTab('manage')}
+            className={`px-4 py-2 text-sm font-medium transition-colors relative ${activeTab === 'manage' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            HR Management
+            {activeTab === 'manage' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />}
+          </button>
+        )}
       </div>
 
       {activeTab === 'summary' && (
@@ -393,6 +420,117 @@ export default function LeavePage() {
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+      {activeTab === 'manage' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+            <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2 uppercase tracking-tight font-black">
+              <Search size={20} className="text-primary" />
+              Manual Balance Adjustment
+            </h3>
+            <div className="flex gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                <input 
+                  type="text"
+                  placeholder="Search Employee by ID (e.g. TO-00095)..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-muted/30 border border-border rounded-none text-xs font-bold uppercase tracking-tight outline-none focus:border-primary transition-all"
+                />
+              </div>
+              <button 
+                onClick={async () => {
+                   setLoading(true);
+                   const res = await fetch(`/api/leave/balances?employeeId=${searchTerm}`);
+                   const data = await res.json();
+                   if (data.success) {
+                     setAdminBalances(data.balances);
+                   } else {
+                     alert(data.error || 'Employee not found');
+                   }
+                   setLoading(false);
+                }}
+                className="px-8 py-2 bg-primary text-secondary rounded-none text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-opacity"
+              >
+                Fetch
+              </button>
+            </div>
+          </div>
+
+          {adminBalances.length > 0 && (
+            <div className="bg-card border border-border rounded-none overflow-hidden shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Leave Type</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Allocated</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Remaining</th>
+                    <th className="px-6 py-4 text-[10px] font-black text-muted-foreground uppercase tracking-widest text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {adminBalances.map((bal) => (
+                    <tr key={bal.id} className="hover:bg-muted/10 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="text-[10px] font-black text-foreground uppercase tracking-tight">{bal.type_name}</div>
+                        <div className="text-[8px] text-primary font-black uppercase tracking-widest mt-1">{bal.type_code}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <input 
+                          type="number"
+                          defaultValue={bal.allocated_days}
+                          step="0.5"
+                          id={`alloc-${bal.id}`}
+                          className="w-24 px-2 py-1 bg-muted/30 border border-border rounded-none text-[10px] font-black outline-none focus:border-primary"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <input 
+                          type="number"
+                          defaultValue={bal.remaining_days}
+                          step="0.01"
+                          id={`rem-${bal.id}`}
+                          className="w-24 px-2 py-1 bg-muted/30 border border-border rounded-none text-[10px] font-black outline-none focus:border-primary"
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={async () => {
+                            const allocated = (document.getElementById(`alloc-${bal.id}`) as HTMLInputElement).value;
+                            const remaining = (document.getElementById(`rem-${bal.id}`) as HTMLInputElement).value;
+                            
+                            setIsUpdating(true);
+                            const res = await fetch('/api/leave/balances/manual', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                balanceId: bal.id,
+                                allocatedDays: allocated,
+                                remainingDays: remaining
+                              })
+                            });
+                            const data = await res.json();
+                            if (data.success) {
+                              alert('SUCCESS: Balance manual override complete.');
+                            } else {
+                              alert('ERROR: ' + (data.error || 'Update failed'));
+                            }
+                            setIsUpdating(false);
+                          }}
+                          disabled={isUpdating}
+                          className="px-4 py-2 bg-secondary text-secondary-foreground text-[8px] font-black uppercase tracking-widest rounded-none border border-border hover:bg-muted disabled:opacity-50"
+                        >
+                          Update
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

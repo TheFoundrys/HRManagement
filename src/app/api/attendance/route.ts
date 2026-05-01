@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       queryString = `
         SELECT 
           e.id as employee_internal_id, e.university_id, e.first_name, e.last_name, e.employee_id,
-          a.id, a.date, a.check_in, a.check_out, a.status, a.working_hours, a.source,
+          a.id, a.date, a.check_in, a.check_out, a.status, a.working_hours, a.source, a.is_remote,
           tu.device_user_id
         FROM employees e
         LEFT JOIN attendance a ON e.id = a.employee_id AND a.date = $2
@@ -116,7 +116,8 @@ export async function GET(request: Request) {
         }
         return Number(row.working_hours || 0);
       })(),
-      source: row.source || 'system'
+      source: row.source || 'system',
+      isRemote: row.is_remote || false
     }));
 
     return NextResponse.json({ success: true, attendance });

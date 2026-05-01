@@ -7,7 +7,7 @@ const publicPaths = [
   '/login', '/register', '/forgot-password', '/reset-password',
   '/api/auth/login', '/api/auth/register', '/api/auth/forgot-password', 
   '/api/auth/reset-password', '/api/auth/verify', '/api/verify',
-  '/api/biometric/push', '/api/attendance/ingest'
+  '/api/biometric/push', '/api/attendance/ingest', '/api/tenants/onboard'
 ];
 
 export default async function proxy(request: NextRequest) {

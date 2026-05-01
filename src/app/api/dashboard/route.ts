@@ -216,7 +216,7 @@ export async function GET(request: Request) {
        return NextResponse.json({ success: true, dashboard: { stats: { presentDays: 0, absentDays: 0, lateDays: 0, leaveDays: 0, pendingLeaves: 0 }, attendance: [], leaves: [] } });
     }
 
-    const [attResult, leaveResult, birthdayResult, balancesResult] = await Promise.all([
+    const [attResult, leaveResult, birthdayResult, balancesResult, perfResult, goalResult] = await Promise.all([
       query('SELECT * FROM attendance WHERE employee_id = $1 AND date >= $2 ORDER BY date DESC', [employee.id, firstOfMonth]),
       query('SELECT l.*, lt.name as type_name FROM leave_requests l JOIN leave_types lt ON l.leave_type_id = lt.id WHERE l.employee_id = $1 ORDER BY l.created_at DESC LIMIT 10', [employee.id]),
       query(`SELECT first_name, last_name, employee_id, university_id 
@@ -228,6 +228,8 @@ export async function GET(request: Request) {
              FROM leave_balances lb 
              JOIN leave_types lt ON lb.leave_type_id = lt.id 
              WHERE lb.employee_id = $1`, [employee.id]),
+      query('SELECT * FROM performance_reviews WHERE employee_id = $1 ORDER BY created_at DESC LIMIT 1', [employee.id]),
+      query("SELECT * FROM performance_goals WHERE employee_id = $1 AND status = 'open' ORDER BY target_date ASC LIMIT 3", [employee.id]),
     ]);
 
     const myAttendance = attResult.rows;
@@ -313,6 +315,11 @@ export async function GET(request: Request) {
             comments: 0
           })),
         allEmployees: (await query('SELECT id, first_name, last_name FROM employees WHERE tenant_id = $1 AND is_active = true ORDER BY first_name ASC', [tenantId])).rows,
+        performance: perfResult.rows[0] ? {
+          rating: perfResult.rows[0].score,
+          feedback: perfResult.rows[0].feedback_summary
+        } : null,
+        goals: goalResult.rows || [],
       },
     });
   } catch (error) {

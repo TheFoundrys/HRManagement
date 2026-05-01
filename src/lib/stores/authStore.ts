@@ -8,6 +8,7 @@ interface User {
   tenantId: string;
   tenantName?: string;
   tenantType?: 'EDUCATION' | 'COMPANY';
+  tenantSettings?: any;
   employeeId?: string;
 }
 

@@ -82,7 +82,12 @@ export default function EmployeesPage() {
         {[
           { label: 'Total Workforce', value: stats.total, icon: Users, color: 'text-primary' },
           { label: 'Active Status', value: stats.active, icon: UserCheck, color: 'text-emerald-500' },
-          { label: isCompany ? 'Designations' : 'Departments', value: isCompany ? designations.length : stats.departments, icon: Building2, color: 'text-amber-500' },
+          { 
+            label: isCompany ? 'Designations' : (user?.tenantSettings?.hierarchy?.custom_labels?.level_2 || 'Departments'), 
+            value: isCompany ? designations.length : stats.departments, 
+            icon: Building2, 
+            color: 'text-amber-500' 
+          },
           { label: 'Unique Roles', value: stats.roles, icon: Briefcase, color: 'text-indigo-500' }
         ].map((s, i) => (
           <div key={i} className="bg-card border border-border p-5 rounded-none shadow-sm hover:border-primary/20 transition-all group">
@@ -125,7 +130,9 @@ export default function EmployeesPage() {
             <thead>
               <tr className="bg-muted/5">
                 <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Employee</th>
-                <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">{isCompany ? 'Designation' : 'Department \u0026 Role'}</th>
+                <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                  {isCompany ? 'Designation' : `${user?.tenantSettings?.hierarchy?.custom_labels?.level_2 || 'Department'} \u0026 Role`}
+                </th>
                 <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Contact</th>
                 <th className="px-6 py-5 text-[10px] font-black text-muted-foreground uppercase tracking-widest">Status</th>
                 <th className="px-6 py-5"></th>

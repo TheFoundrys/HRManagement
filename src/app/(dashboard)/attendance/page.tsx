@@ -24,6 +24,8 @@ export default function AttendancePage() {
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [month, setMonth] = useState((new Date().getMonth() + 1).toString());
+  const [year, setYear] = useState(new Date().getFullYear().toString());
   const [status, setStatus] = useState('');
   const [mode, setMode] = useState('');
 
@@ -34,9 +36,8 @@ export default function AttendancePage() {
       if (isAdmin) {
         queryParams.append('date', date);
       } else {
-        const now = new Date();
-        queryParams.append('month', (now.getMonth() + 1).toString());
-        queryParams.append('year', now.getFullYear().toString());
+        queryParams.append('month', month);
+        queryParams.append('year', year);
         queryParams.append('employeeId', user?.employeeId || '');
       }
       if (status) queryParams.append('status', status);
@@ -62,7 +63,7 @@ export default function AttendancePage() {
       const interval = setInterval(() => fetchRecords(true), 5000);
       return () => clearInterval(interval);
     }
-  }, [date, status, user]);
+  }, [date, month, year, status, user]);
 
   const clock = async () => {
     if (!user) return;
@@ -177,6 +178,33 @@ export default function AttendancePage() {
             />
           </div>
         )}
+        {!isAdmin && (
+          <>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg shadow-sm">
+              <Calendar size={16} className="text-muted-foreground" />
+              <select 
+                value={month} 
+                onChange={e => setMonth(e.target.value)} 
+                className="text-sm font-medium outline-none bg-transparent cursor-pointer text-foreground"
+              >
+                {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                  <option key={i} value={i + 1} className="bg-card">{m}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg shadow-sm">
+              <select 
+                value={year} 
+                onChange={e => setYear(e.target.value)} 
+                className="text-sm font-medium outline-none bg-transparent cursor-pointer text-foreground"
+              >
+                {[2024, 2025, 2026].map(y => (
+                  <option key={y} value={y} className="bg-card">{y}</option>
+                ))}
+              </select>
+            </div>
+          </>
+        )}
         <div className="flex items-center gap-2 px-3 py-1.5 bg-card border border-border rounded-lg shadow-sm">
           <Filter size={16} className="text-muted-foreground" />
           <select 
@@ -251,8 +279,11 @@ export default function AttendancePage() {
                         <span className="text-sm font-bold text-foreground">{Number(r.workingHours || 0).toFixed(1)}h</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right flex flex-col items-end gap-1">
                       {getStatusBadge(r.status)}
+                      {r.isRemote && (
+                        <span className="text-[9px] font-black uppercase text-primary tracking-widest bg-primary/5 px-1.5 py-0.5 border border-primary/10">Remote</span>
+                      )}
                     </td>
                   </tr>
                 ))

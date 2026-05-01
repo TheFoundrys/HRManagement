@@ -9,6 +9,7 @@ export interface TokenPayload extends JWTPayload {
   tenantId: string;
   departmentId: string;
   employeeId?: string;
+  internalEmployeeId?: string;
 }
 
 export async function createToken(payload: Omit<TokenPayload, 'iat' | 'exp'>): Promise<string> {

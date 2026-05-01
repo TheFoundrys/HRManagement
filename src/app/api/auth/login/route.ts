@@ -30,9 +30,10 @@ export async function POST(request: Request) {
 
     // Find user in PostgreSQL
     const result = await query(`
-      SELECT u.id, u.name, u.email, u.password_hash, u.role, u.tenant_id, u.employee_id, u.is_active, e.department_id
+      SELECT u.id, u.name, u.email, u.password_hash, u.role, u.tenant_id, u.employee_id, u.is_active, 
+             e.id as internal_employee_id, e.department_id
       FROM users u
-      LEFT JOIN employees e ON u.employee_id = e.employee_id
+      LEFT JOIN employees e ON (u.id = e.user_id OR u.employee_id = e.employee_id)
       WHERE u.email = $1
     `, [normalizedEmail]);
 
@@ -81,17 +82,20 @@ export async function POST(request: Request) {
       tenantId: user.tenant_id,
       name: user.name,
       employeeId: user.employee_id,
+      internalEmployeeId: user.internal_employee_id,
       departmentId: user.department_id,
     });
 
     // Fetch tenant details
     let tenantName = 'HR Portal';
     let tenantType = 'EDUCATION';
+    let tenantSettings = {};
     if (user.tenant_id) {
-      const tenantRes = await query('SELECT name, tenant_type FROM tenants WHERE id = $1', [user.tenant_id]);
+      const tenantRes = await query('SELECT name, tenant_type, settings FROM tenants WHERE id = $1', [user.tenant_id]);
       if (tenantRes.rows.length > 0) {
         tenantName = tenantRes.rows[0].name;
         tenantType = tenantRes.rows[0].tenant_type;
+        tenantSettings = tenantRes.rows[0].settings || {};
       }
     }
 
@@ -100,8 +104,10 @@ export async function POST(request: Request) {
       user: {
         id: user.id, name: user.name, email: user.email,
         role: user.role, tenantId: user.tenant_id,
-        tenantName, tenantType,
-        employeeId: user.employee_id, departmentId: user.department_id,
+        tenantName, tenantType, tenantSettings,
+        employeeId: user.employee_id, 
+        internalEmployeeId: user.internal_employee_id,
+        departmentId: user.department_id,
       },
     });
 
